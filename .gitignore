@@ -1,4 +1,17 @@
-# Created by .ignore support plugin (hsz.mobi)
+### Python template
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+
 ### macOS template
 # General
 .DS_Store
@@ -11,25 +24,12 @@ Icon
 ._*
 
 
-### Python template
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# C extensions
-*.so
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Jupyter Notebook
-.ipynb_checkpoints
+### VSCode project files
+.vscode/
 
 
 ### IntelliJ project files
-.idea
+.idea/
 
 
 ### Project files
