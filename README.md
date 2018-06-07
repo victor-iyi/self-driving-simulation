@@ -95,7 +95,7 @@ than the previous best.  For example, the first epoch will generate a file calle
 
 <!-- markdownlint-disable MD033 -->
 A 9 layer convolutional network, based off of Nvidia's [End-to-end learning for self driving car](https://arxiv.org/pdf/1604.07316) paper.
-72 hours of driving data was collected in <a href="https://www.youtube.com/watch?v=NJU9ULQUwng">all sorts of conditions from human drivers</a>
+72 hours of driving data was collected in <a href="https://www.youtube.com/watch?v=NJU9ULQUwng" target="_blank">all sorts of conditions from human drivers</a>
 <!-- markdownlint-enable MD033 -->
 
 ### Hardware design
