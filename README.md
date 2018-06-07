@@ -93,8 +93,10 @@ than the previous best.  For example, the first epoch will generate a file calle
 
 ### Training Mode - Behavioral cloning
 
+<!-- markdownlint-disable MD033 -->
 A 9 layer convolutional network, based off of Nvidia's [End-to-end learning for self driving car](https://arxiv.org/pdf/1604.07316) paper.
-72 hours of driving data was collected in all sorts of conditions from human drivers <https://www.youtube.com/watch?v=NJU9ULQUwng>
+72 hours of driving data was collected in <a href="https://www.youtube.com/watch?v=NJU9ULQUwng">all sorts of conditions from human drivers</a>
+<!-- markdownlint-enable MD033 -->
 
 ### Hardware design
 
@@ -114,7 +116,7 @@ Eventually, it generated steering commands using just a single camera.
 
 - Udacity [Self-Driving Nanodegree](https://github.com/udacity/self-driving-car-sim)
 - Nvidia
-- naokishibuya
+- [Naoki Shibuya](https://github.com/naokishibuya/)
 
 ## Contribution
 
