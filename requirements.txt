@@ -1,0 +1,30 @@
+# All required dependencies are neatly packed in the ``requirements.txt`` file.
+
+# > **NOTE:** This project was developed with Python 3.6.5 therefore use the appropriate Python interpreter *(i.e. ``python3`` instead of ``python`` which could most likely be Python 2.7 & ``pip3`` instead of ``pip``)*.
+
+# ```sh
+# > pip install --upgrade pip
+# ```
+
+# Then you probably want to work from your local PC:
+
+# Start by cloning the project from github:
+
+# ```sh
+# > git clone https://github.com/victor-iyiola/self-driving-simulation.git
+# > cd self-driving-simulation
+# ```
+
+# or:
+
+# You can download the `.zip` project files [here](https://github.com/victor-iyiola/self-driving-simulation) and extract the project files.
+
+# ```sh
+# > cd /path/to/self-driving-simulation
+# ```
+
+# Install these requirements:
+
+# ```sh
+# > pip install --upgrade -r requirements.txt
+# ```
