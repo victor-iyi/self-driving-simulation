@@ -18,6 +18,7 @@ import os
 
 import numpy as np
 import pandas as pd
+import cv2
 
 import tensorflow as tf
 
@@ -34,8 +35,6 @@ FILE_NAMES = ['img_center', 'img_left', 'img_right',
 
 # Image dimensions.
 img_size, channels = 32, 3
-
-import cv2
 
 
 # Use a custom OpenCV function to read the image, instead of the standard
@@ -62,16 +61,22 @@ def _parser(filename: tf.string, label: tf.Tensor):
     Returns:
         tuple: image_decoded, label
     """
-    # Reads an image from a file, decodes it into a dense tensor,
-    # resizes it to a fixed shape and cast into tf.float32
+    # Read the contents in filename as a string.
     image_string = tf.read_file(filename)
+
+    # Decode string into dense Tensor
     image_decoded = tf.image.decode_image(image_string)
-    image_decoded.set_shape([img_size, img_size, channels])
-    image_cast = tf.cast(image_decoded, tf.float32)
+
+    # Crop and/or pads an image to a target width and height.
+    image_resized = tf.image.resize_image_with_crop_or_pad(image_decoded,
+                                                           img_size, img_size)
+
+    # Cast tf.uint8 into tf.float32
+    image_cast = tf.cast(image_resized, tf.float32)
 
     # Reshape label.
     label_reshape = tf.reshape(label, shape=(1,))
-
+    # Return parsed image & label.
     return image_cast, label_reshape
 
 
@@ -93,9 +98,9 @@ def make_dataset(features: np.ndarray, labels: np.ndarray = None, **kwargs):
         dataset = dataset.map(_resize_function)
 
     # Apply transformation steps...
+    dataset = dataset.batch(batch_size=batch_size)
     if shuffle:
         dataset = dataset.shuffle(buffer_size=buffer_size)
-    dataset = dataset.batch(batch_size=batch_size)
 
     return dataset
 
@@ -112,7 +117,7 @@ def load_data(features: np.ndarray = None, **kwargs):
         labels = df[FILE_NAMES[-1]].astype(np.float32).values
 
         # Create a dataset object.
-        dataset = make_dataset(features, labels, **kwargs)
+        dataset = make_dataset(features, labels=labels, **kwargs)
     else:
         dataset = make_dataset(features, labels=None, **kwargs)
 

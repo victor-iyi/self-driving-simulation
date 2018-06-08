@@ -69,7 +69,7 @@ class Model(tf.keras.Model):
                 # Input layer.
                 with tf.name_scope('input'):
                     net = tf.reshape(inputs,
-                                     shape=(self.args.batch_size, self.args.img_size,
+                                     shape=(-1, self.args.img_size,
                                             self.args.img_size, self.args.img_depth),
                                      name='reshape')
 
@@ -94,7 +94,10 @@ class Model(tf.keras.Model):
 
 def loss_fn(predictions, labels):
     with tf.name_scope('loss'):
-        loss = tf.losses.log_loss(labels=labels, predictions=predictions)
+        # loss = tf.keras.losses.categorical_crossentropy(y_true=labels, y_pred=predictions)
+        # loss = tf.reduce_mean(loss)
+        loss = tf.losses.mean_squared_error(labels=labels, predictions=predictions,
+                                            reduction=tf.losses.Reduction.MEAN)
     return loss
 
 
@@ -125,6 +128,13 @@ def train(args):
         saver = tf.train.Saver()
         writer = tf.summary.FileWriter(logdir=args.log_dir, graph=sess.graph)
 
+        # DEBUGGING:
+        # sess.run([init, iterator.initializer])
+        # _p, _l, _lo = sess.run([predictions, labels, loss])
+        # print('Predictions', _p)
+        # print('Labels', _l)
+        # print('Loss', _lo)
+
         if tf.gfile.Exists(save_dir):
             try:
                 ckpt_path = tf.train.latest_checkpoint(save_dir)
@@ -137,6 +147,7 @@ def train(args):
             # Create checkpoint directory.
             tf.gfile.MakeDirs(save_dir)
 
+            # Initialize global variables.
             logging.info('No checkpoint. Initializing global variables.')
             sess.run(init)
 
@@ -165,9 +176,15 @@ def train(args):
                     except tf.errors.OutOfRangeError:
                         break
             except KeyboardInterrupt:
-                print('\nTraining interrupted by user!')
+                print('\n{0}\nTraining interrupted by user!'.format('-' * 55))
+                print('Saving model to {}'.format(args.save_path))
 
-                # End training.
+                saver.save(sess=sess, save_path=args.save_path,
+                           global_step=global_step)
+
+                print('{0}\n'.format('-' * 55))
+
+                # !- End training.
                 break
 
 
@@ -188,9 +205,9 @@ if __name__ == '__main__':
                         help='Optimizer\'s learning rate.')
 
     # Training arguments.
-    parser.add_argument('--log_every', dest='log_every', type=int, default=200,
+    parser.add_argument('--log_every', dest='log_every', type=int, default=20,
                         help='Interval to log summaries to Tensorboard.')
-    parser.add_argument('--save_every', dest='save_every', type=int, default=500,
+    parser.add_argument('--save_every', dest='save_every', type=int, default=10,
                         help='Intervals to save model checkpoints.')
     parser.add_argument('-e', dest='epochs', type=int, default=1000,
                         help='Number of training epochs.')
