@@ -16,10 +16,15 @@
 """
 import os.path
 import argparse
+import logging
 
 import tensorflow as tf
-
 import data
+
+# Logging configurations.
+FORMAT = '[%(name)s:%(lineno)d] %(levelname)s: %(message)s'
+logging.basicConfig(format=FORMAT, level=logging.DEBUG)
+tf.logging.set_verbosity(tf.logging.WARN)
 
 
 # noinspection PyAbstractClass
@@ -122,12 +127,15 @@ def train(args):
             try:
                 ckpt_path = tf.train.latest_checkpoint(save_dir)
                 saver.restore(sess=sess, save_path=ckpt_path)
-                print('INFO: Restored checkpoint from {}'.format(ckpt_path))
+                logging.info('Restored checkpoint from {}'.format(ckpt_path))
             except Exception:
-                print('WARN: Could not load checkpoint. Initializing global variables.')
+                logging.warn('Could not load checkpoint. Initializing global variables.')
                 sess.run(init)
         else:
-            print('INFO: No checkpoint. Initializing global variables.')
+            # Create checkpoint directory.
+            tf.gfile.MakeDirs(save_dir)
+
+            logging.info('No checkpoint. Initializing global variables.')
             sess.run(init)
 
 
@@ -135,11 +143,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # Data & checkpoint arguments.
-    parser.add_argument('-d', dest='data_dir', type=str, default='./simulations/',
+    # parser.add_argument('-d', dest='data_dir', type=str, default='./simulations/',
+    #                     help='Directory where simulated data is stored.')
+    parser.add_argument('-d', dest='data_dir', type=str, default='./simulated_data/',
                         help='Directory where simulated data is stored.')
-    parser.add_argument('-s', dest='save_path', type=str, default='./saved/model.ckpt',
+    parser.add_argument('-s', dest='save_path', type=str, default='./saved/models/nvidia.ckpt',
                         help='Checkpoint saved path.')
-    parser.add_argument('-log', dest='log_dir', type=str, default='./saved/model.ckpt',
+    parser.add_argument('-log', dest='log_dir', type=str, default='./saved/logs/',
                         help='Path to write Tensorboard event logs.')
 
     # Data dimension.
@@ -161,9 +171,12 @@ if __name__ == '__main__':
     # Parsed arguments.
     args = parser.parse_args()
 
-    print('{0}\n{1:^45}\n{0}'.format('-' * 45, 'Command Line Arguments'))
+    print('{0}\n{1:^55}\n{0}'.format('-' * 55, 'Command Line Arguments'))
     for k, v in vars(args).items():
-        print('{:<20} = {:>20}'.format(k, v))
-    print('{}\n'.format('-' * 45))
+        print('{:<20} = {:>30}'.format(k, v))
+    print('{}\n'.format('-' * 55))
+
+    # Update data directory.
+    data.data_dir = args.data_dir
 
     train(args=args)
