@@ -114,8 +114,8 @@ Eventually, it generated steering commands using just a single camera.
 
 ## Credits
 
-- Udacity [Self-Driving Nanodegree](https://github.com/udacity/self-driving-car-sim)
-- Nvidia
+- [Udacity Self-Driving Nanodegree](https://github.com/udacity/self-driving-car-sim)
+- [Nvidia End-to-end learning for self driving car](https://arxiv.org/pdf/1604.07316)
 - [Naoki Shibuya](https://github.com/naokishibuya/)
 
 ## Contribution
