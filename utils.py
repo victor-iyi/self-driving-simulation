@@ -14,3 +14,10 @@
      MIT License
      Copyright (c) 2018. Victor I. Afolabi. All rights reserved.
 """
+import os
+
+data_dir = ''
+
+
+def load_data():
+    pass

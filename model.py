@@ -17,6 +17,7 @@
 import argparse
 import tensorflow as tf
 
+import utils
 
 # noinspection PyAbstractClass
 class Model(tf.keras.Model):
@@ -81,6 +82,7 @@ class Model(tf.keras.Model):
 
 
 def train(args):
+    train, test = utils.load_data()
     model = Model(args)
     pass
 
