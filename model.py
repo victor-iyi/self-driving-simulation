@@ -17,7 +17,7 @@
 import argparse
 import tensorflow as tf
 
-import utils
+import data
 
 
 # noinspection PyAbstractClass
@@ -83,9 +83,9 @@ class Model(tf.keras.Model):
 
 
 def train(args):
-    train, test = utils.load_data()
-    model = Model(args)
-    pass
+    dataset = data.load_data()
+    # model = Model(args)
+    print(dataset)
 
 
 if __name__ == '__main__':
@@ -110,5 +110,7 @@ if __name__ == '__main__':
 
     print('{0}\n{1:^45}\n{0}'.format('-' * 45, 'Command Line Arguments'))
     for k, v in vars(args).items():
-        print('{:<15} = {:>20}'.format(k, v))
-    print('{}'.format('-' * 45))
+        print('{:<20} = {:>20}'.format(k, v))
+    print('{}\n'.format('-' * 45))
+
+    train(args=args)
