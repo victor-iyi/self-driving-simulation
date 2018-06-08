@@ -19,6 +19,7 @@ import tensorflow as tf
 
 import utils
 
+
 # noinspection PyAbstractClass
 class Model(tf.keras.Model):
     def __init__(self, args):
