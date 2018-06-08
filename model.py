@@ -14,7 +14,9 @@
      MIT License
      Copyright (c) 2018. Victor I. Afolabi. All rights reserved.
 """
+import os.path
 import argparse
+
 import tensorflow as tf
 
 import data
@@ -52,6 +54,9 @@ class Model(tf.keras.Model):
         # Prediction / Output layer.
         self.pred_layer = tf.keras.layers.Dense(units=1)
 
+    def __call__(self, inputs, *args, **kwargs):
+        return super().__call__(inputs, *args, **kwargs)
+
     def call(self, inputs, **kwargs):
         with tf.name_scope('model'):
             # Network layers.
@@ -82,10 +87,48 @@ class Model(tf.keras.Model):
         return net
 
 
+def loss_fn(predictions, labels):
+    with tf.name_scope('loss'):
+        loss = tf.losses.log_loss(labels=labels, predictions=predictions)
+    return loss
+
+
 def train(args):
-    dataset = data.load_data()
-    # model = Model(args)
-    print(dataset)
+    dataset = data.load_data(**vars(args))
+    iterator = dataset.make_initializable_iterator()
+    features, labels = iterator.get_next()
+
+    model = Model(args)
+    predictions = model(features)
+
+    loss = loss_fn(predictions, labels)
+
+    # Minimize loss (train the model).
+    optimizer = tf.train.RMSPropOptimizer(learning_rate=args.learning_rate)
+    global_step = tf.train.get_or_create_global_step()
+    train_op = optimizer.minimize(loss=loss, global_step=global_step,
+                                  name='train_op')
+
+    with tf.Session() as sess:
+        # Initialize global variables.
+        init = tf.global_variables_initializer()
+
+        save_dir = os.path.dirname(args.save_path)
+
+        saver = tf.train.Saver()
+        writer = tf.summary.FileWriter(logdir=args.log_dir, graph=sess.graph)
+
+        if tf.gfile.Exists(save_dir):
+            try:
+                ckpt_path = tf.train.latest_checkpoint(save_dir)
+                saver.restore(sess=sess, save_path=ckpt_path)
+                print('INFO: Restored checkpoint from {}'.format(ckpt_path))
+            except Exception:
+                print('WARN: Could not load checkpoint. Initializing global variables.')
+                sess.run(init)
+        else:
+            print('INFO: No checkpoint. Initializing global variables.')
+            sess.run(init)
 
 
 if __name__ == '__main__':
@@ -96,12 +139,22 @@ if __name__ == '__main__':
                         help='Directory where simulated data is stored.')
     parser.add_argument('-s', dest='save_path', type=str, default='./saved/model.ckpt',
                         help='Checkpoint saved path.')
+    parser.add_argument('-log', dest='log_dir', type=str, default='./saved/model.ckpt',
+                        help='Path to write Tensorboard event logs.')
+
+    # Data dimension.
+    parser.add_argument('-img_size', dest='img_size', type=int, default=32,
+                        help='Size of input image to the network.')
+    parser.add_argument('-channels', dest='img_depth', type=int, default=3,
+                        help='Image channels. One of (None, 0, 1, 2, 3 or 4)')
 
     # Training arguments.
     parser.add_argument('-e', dest='epochs', type=int, default=10000,
                         help='Number of training epochs.')
     parser.add_argument('-b', dest='batch_size', type=int, default=128,
                         help='Mini-batch size.')
+    parser.add_argument('-dr', dest='dropout', type=float, default=0.5,
+                        help='Dropout rate. Probability of randomly turning off neurons.')
     parser.add_argument('-lr', dest='learning_rate', type=float, default=1e-2,
                         help='Optimizer\'s learning rate.')
 

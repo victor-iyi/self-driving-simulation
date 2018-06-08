@@ -64,12 +64,16 @@ def _parser(filename: tf.string, label: tf.Tensor):
         tuple: image_decoded, label
     """
     # Reads an image from a file, decodes it into a dense tensor,
-    # and resizes it to a fixed shape.
+    # resizes it to a fixed shape and cast into tf.float32
     image_string = tf.read_file(filename)
     image_decoded = tf.image.decode_image(image_string)
     image_decoded.set_shape([img_size, img_size, channels])
     image_cast = tf.cast(image_decoded, tf.float32)
-    return image_cast, label
+
+    # Reshape label.
+    label_reshape = tf.reshape(label, shape=(1,))
+
+    return image_cast, label_reshape
 
 
 def make_dataset(features: np.ndarray, labels: np.ndarray = None, **kwargs):
