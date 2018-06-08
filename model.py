@@ -40,12 +40,12 @@ class Model(tf.keras.Model):
                                             padding='same', activation='elu')
         self.conv2 = tf.keras.layers.Conv2D(filters=36, kernel_size=5,
                                             padding='same', activation='elu')
-        # self.conv3 = tf.keras.layers.Conv2D(filters=48, kernel_size=5,
-        #                                     padding='same', activation='elu')
-        # self.conv4 = tf.keras.layers.Conv2D(filters=64, kernel_size=3,
-        #                                     padding='same', activation='elu')
-        # self.conv5 = tf.keras.layers.Conv2D(filters=64, kernel_size=3,
-        #                                     padding='same', activation='elu')
+        self.conv3 = tf.keras.layers.Conv2D(filters=48, kernel_size=5,
+                                            padding='same', activation='elu')
+        self.conv4 = tf.keras.layers.Conv2D(filters=64, kernel_size=3,
+                                            padding='same', activation='elu')
+        self.conv5 = tf.keras.layers.Conv2D(filters=64, kernel_size=3,
+                                            padding='same', activation='elu')
 
         # Flatten & apply dropout.
         self.flatten = tf.keras.layers.Flatten()
@@ -76,8 +76,8 @@ class Model(tf.keras.Model):
                 # Convolutional layers.
                 with tf.name_scope('feature_extraction'):
                     net = self.conv2(self.conv1(net))
-                    # net = self.conv4(self.conv3(net))
-                    # net = self.conv5(net)
+                    net = self.conv4(self.conv3(net))
+                    net = self.conv5(net)
 
                 # Fully connected / Dense layers.
                 with tf.name_scope('fully_connected'):
@@ -146,14 +146,15 @@ def train(args):
                 sess.run(iterator.initializer)
                 while True:
                     try:
-                        _step, _loss = sess.run([global_step, loss])
+                        # Run train operation.
+                        _, _step, _loss = sess.run([train_op, global_step, loss])
 
                         print('\rEpoch: {:,} Step: {:,} Loss: {:.2f}'
                               .format(epoch, _step, _loss), end='')
 
-                        # if _step % args.log_every == 0:
-                        #     summary = sess.run(merged)
-                        #     writer.add_summary(summary, global_step=_step)
+                        if _step % args.log_every == 0:
+                            summary = sess.run(merged)
+                            writer.add_summary(summary, global_step=_step)
 
                         if _step % args.save_every == 0:
                             print('\n{0}\nSaving model...'.format('-' * 55))
@@ -173,29 +174,11 @@ def train(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    # Data & checkpoint arguments.
-    # parser.add_argument('-d', dest='data_dir', type=str, default='./simulations/',
-    #                     help='Directory where simulated data is stored.')
-    parser.add_argument('-d', dest='data_dir', type=str, default='./simulated_data/',
-                        help='Directory where simulated data is stored.')
-    parser.add_argument('-s', dest='save_path', type=str, default='./saved/models/nvidia.ckpt',
-                        help='Checkpoint saved path.')
-    parser.add_argument('-log', dest='log_dir', type=str, default='./saved/logs/',
-                        help='Path to write Tensorboard event logs.')
-
     # Data dimension.
-    parser.add_argument('-img_size', dest='img_size', type=int, default=32,
-                        help='Size of input image to the network.')
     parser.add_argument('-channels', dest='img_depth', type=int, default=3,
                         help='Image channels. One of (None, 0, 1, 2, 3 or 4)')
-
-    # Training arguments.
-    parser.add_argument('-e', dest='epochs', type=int, default=1000,
-                        help='Number of training epochs.')
-    parser.add_argument('--log_every', dest='log_every', type=int, default=200,
-                        help='Interval to log summaries to Tensorboard.')
-    parser.add_argument('--save_every', dest='save_every', type=int, default=1000,
-                        help='Intervals to save model checkpoints.')
+    parser.add_argument('-img_size', dest='img_size', type=int, default=32,
+                        help='Size of input image to the network.')
 
     parser.add_argument('-b', dest='batch_size', type=int, default=64,
                         help='Mini-batch size.')
@@ -203,6 +186,24 @@ if __name__ == '__main__':
                         help='Dropout rate. Probability of randomly turning off neurons.')
     parser.add_argument('-lr', dest='learning_rate', type=float, default=1e-2,
                         help='Optimizer\'s learning rate.')
+
+    # Training arguments.
+    parser.add_argument('--log_every', dest='log_every', type=int, default=200,
+                        help='Interval to log summaries to Tensorboard.')
+    parser.add_argument('--save_every', dest='save_every', type=int, default=500,
+                        help='Intervals to save model checkpoints.')
+    parser.add_argument('-e', dest='epochs', type=int, default=1000,
+                        help='Number of training epochs.')
+
+    # Data & checkpoint arguments.
+    # parser.add_argument('-d', dest='data_dir', type=str, default='./simulations/',
+    #                     help='Directory where simulated data is stored.')
+    parser.add_argument('-log', dest='log_dir', type=str, default='./saved/logs/',
+                        help='Path to write Tensorboard event logs.')
+    parser.add_argument('-d', dest='data_dir', type=str, default='./simulated_data/',
+                        help='Directory where simulated data is stored.')
+    parser.add_argument('-s', dest='save_path', type=str, default='./saved/models/nvidia.ckpt',
+                        help='Checkpoint saved path.')
 
     # Parsed arguments.
     args = parser.parse_args()
