@@ -107,12 +107,14 @@ def train(args):
     predictions = model(features)
 
     loss = loss_fn(predictions, labels)
+    tf.summary.scalar('loss', loss)
 
     # Minimize loss (train the model).
     optimizer = tf.train.RMSPropOptimizer(learning_rate=args.learning_rate)
     global_step = tf.train.get_or_create_global_step()
     train_op = optimizer.minimize(loss=loss, global_step=global_step,
                                   name='train_op')
+    merged = tf.summary.merge_all()
 
     with tf.Session() as sess:
         # Initialize global variables.
@@ -138,6 +140,37 @@ def train(args):
             logging.info('No checkpoint. Initializing global variables.')
             sess.run(init)
 
+        for epoch in range(args.epochs):
+            try:
+                # Run dataset initializer.
+                sess.run(iterator.initializer)
+                while True:
+                    try:
+                        print('Before train')
+                        _, _step, _loss = sess.run([train_op, global_step, loss])
+                        print('After train')
+
+                        print('\rEpoch: {:,} Step: {:,} Loss: {:.2f}'
+                              .format(epoch, _step, _loss), end='')
+
+                        if _step % args.log_every == 0:
+                            summary = sess.run(merged)
+                            writer.add_summary(summary, global_step=_step)
+
+                        if _step % args.save_every == 0:
+                            print('\n{0}\nSaving model...'.format('-' * 55))
+                            saver.save(sess=sess, save_path=args.save_path,
+                                       global_step=global_step)
+                            print('{0}\n'.format('-' * 55))
+
+                    except tf.errors.OutOfRangeError:
+                        break
+            except KeyboardInterrupt:
+                print('\nTraining interrupted by user!')
+
+                # End training.
+                break
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -161,6 +194,11 @@ if __name__ == '__main__':
     # Training arguments.
     parser.add_argument('-e', dest='epochs', type=int, default=10000,
                         help='Number of training epochs.')
+    parser.add_argument('--log_every', dest='log_every', type=int, default=200,
+                        help='Interval to log summaries to Tensorboard.')
+    parser.add_argument('--save_every', dest='save_every', type=int, default=1000,
+                        help='Intervals to save model checkpoints.')
+
     parser.add_argument('-b', dest='batch_size', type=int, default=128,
                         help='Mini-batch size.')
     parser.add_argument('-dr', dest='dropout', type=float, default=0.5,
