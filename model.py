@@ -14,11 +14,12 @@
      MIT License
      Copyright (c) 2018. Victor I. Afolabi. All rights reserved.
 """
-import os.path
 import argparse
 import logging
+import os.path
 
 import tensorflow as tf
+
 import data
 
 # Logging configurations.

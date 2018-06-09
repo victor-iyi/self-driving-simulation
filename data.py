@@ -37,17 +37,34 @@ FILE_NAMES = ['img_center', 'img_left', 'img_right',
 img_size, channels = 32, 3
 
 
-# Use a custom OpenCV function to read the image, instead of the standard
-# TensorFlow `tf.read_file()` operation.
 def _read_py_function(filename, label):
+    """Custom OpenCV function to read images, instead of `tf.read_file()` op.
+
+    Args:
+        filename (tf.string): Path to an image file.
+        label (np.ndarray): Associated labels.
+
+    Returns:
+        tuple: image_decoded, label
+    """
     image_decoded = cv2.imread(filename.decode(), cv2.IMREAD_GRAYSCALE)
     return image_decoded, label
 
 
 # Use standard TensorFlow operations to resize the image to a fixed shape.
-def _resize_function(image_decoded, label):
+def _resize_function(image_decoded: tf.Tensor, label: tf.Tensor):
+    """Use standard TensorFlow ops to resize image to a fixed shape.
+
+    Args:
+        image_decoded (tf.Tensor): Decoded image.
+        label (tf.Tensor): Associated label.
+
+    Returns:
+        tuple: image_resized, label
+    """
     image_decoded.set_shape([None, None, None])
-    image_resized = tf.image.resize_images(image_decoded, [28, 28])
+    image_resized = tf.image.resize_image_with_crop_or_pad(image_decoded,
+                                                           img_size, img_size)
     return image_resized, label
 
 
@@ -81,6 +98,23 @@ def _parser(filename: tf.string, label: tf.Tensor):
 
 
 def make_dataset(features: np.ndarray, labels: np.ndarray = None, **kwargs):
+    """Returns a dataset object from tensor slices.
+
+    Args:
+        features (np.ndarray): Features (filenames).
+        labels (np.ndarray): List of associated labels to features.
+
+    Keyword Args:
+        shuffle (bool): Maybe shuffle dataset.
+            (default {True})
+        buffer_size (int): Amount of data to shuffle randomly at a time.
+            (default {1000}
+        batch_size (int): Mini-batch size.
+            (default {128})
+
+    Returns:
+        tf.data.Dataset: Dataset object.
+    """
     # Extract keyword arguments.
     shuffle = kwargs.get('shuffle') or True
     buffer_size = kwargs.get('buffer_size') or 1000
@@ -106,6 +140,17 @@ def make_dataset(features: np.ndarray, labels: np.ndarray = None, **kwargs):
 
 
 def load_data(features: np.ndarray = None, **kwargs):
+    """Helper function to load dataset into a tf.data.Dataset object.
+
+    Args:
+        features (np.ndarray): Images to create dataset slice from.
+
+    Keyword Args:
+        See ``make_dataset``
+
+    Returns:
+
+    """
     # test_size = kwargs.get('test_size') or 0.1
 
     if features is None:
