@@ -21,7 +21,7 @@ import os.path
 import tensorflow as tf
 
 import data
-
+logger = logging.Logger(__name__, level=logging.DEBUG)
 # Logging configurations.
 FORMAT = '[%(name)s:%(lineno)d] %(levelname)s: %(message)s'
 logging.basicConfig(format=FORMAT, level=logging.DEBUG)
@@ -206,9 +206,9 @@ if __name__ == '__main__':
                         help='Optimizer\'s learning rate.')
 
     # Training arguments.
-    parser.add_argument('--log_every', dest='log_every', type=int, default=20,
+    parser.add_argument('--log_every', dest='log_every', type=int, default=50,
                         help='Interval to log summaries to Tensorboard.')
-    parser.add_argument('--save_every', dest='save_every', type=int, default=10,
+    parser.add_argument('--save_every', dest='save_every', type=int, default=200,
                         help='Intervals to save model checkpoints.')
     parser.add_argument('-e', dest='epochs', type=int, default=1000,
                         help='Number of training epochs.')
