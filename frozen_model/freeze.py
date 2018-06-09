@@ -122,9 +122,9 @@ if __name__ == '__main__':
     )
 
     # File & directory arguments.
-    parser.add_argument('-d', dest='ckpt_dir', type=str, default='./saved/models/',
+    parser.add_argument('-d', dest='ckpt_dir', type=str, default='saved/models/',
                         help='Directory containing checkpoint files.')
-    parser.add_argument('-f', dest='frozen_file', type=str, default='./saved/frozen/model.pb',
+    parser.add_argument('-f', dest='frozen_file', type=str, default='saved/frozen/model.pb',
                         help='Path to a protobuf file (.pb), where frozen model is saved.')
 
     # Graph control arguments.
