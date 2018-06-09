@@ -214,11 +214,9 @@ if __name__ == '__main__':
                         help='Number of training epochs.')
 
     # Data & checkpoint arguments.
-    # parser.add_argument('-d', dest='data_dir', type=str, default='./simulations/',
-    #                     help='Directory where simulated data is stored.')
     parser.add_argument('-log', dest='log_dir', type=str, default='./saved/logs/',
                         help='Path to write Tensorboard event logs.')
-    parser.add_argument('-d', dest='data_dir', type=str, default='./simulated_data/',
+    parser.add_argument('-d', dest='data_dir', type=str, default='./simulations/',
                         help='Directory where simulated data is stored.')
     parser.add_argument('-s', dest='save_path', type=str, default='./saved/models/nvidia.ckpt',
                         help='Checkpoint saved path.')
