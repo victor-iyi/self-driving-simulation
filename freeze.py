@@ -22,14 +22,35 @@ from tensorflow.python.framework.graph_util import convert_variables_to_constant
 
 
 def freeze(ckpt_dir: str, output_nodes: list, **kwargs):
+    """Freeze a given model from it's checkpoint.
+
+    Args:
+        ckpt_dir ():
+        output_nodes ():
+
+    Keyword Args:
+        frozen_file (str): Path to a protobuf file (.pb) otherwise it appends it.
+            (default {'saved/frozen/model.pb'}
+        clear_devices (bool): Allow TensorFlow to control loading, where it wants
+            operations to be calculated. (default {True})
+
+
+    Raises:
+        NotADirectoryError:
+            Directory does not exist! `ckpt_dir`
+
+    """
     # Make sure `ckpt_dir` is a directory & exists.
     if not tf.gfile.IsDirectory(ckpt_dir):
         raise NotADirectoryError('Directory does not exist! {}'.format(ckpt_dir))
 
     # Allow TensorFlow to control on loading, where it wants operations to be calculated.
     clear_devices = kwargs.get('clear_devices') or True
-    frozen_file = kwargs.get('frozen_file') or 'saved/frozen_model/nvidia.pb'
-    frozen_file = os.path.abspath(frozen_file)
+
+    # Destination frozen file name.
+    frozen_file = kwargs.get('frozen_file') or 'saved/frozen/model.pb'
+    frozen_file = os.path.abspath((frozen_file if frozen_file.endswith('.pb')
+                                   else '{}.pb'.format(frozen_file)))
 
     # If the frozen path is not a directory, create it.
     if not tf.gfile.IsDirectory(os.path.dirname(frozen_file)):
@@ -57,6 +78,7 @@ def freeze(ckpt_dir: str, output_nodes: list, **kwargs):
                                                               input_graph_def=input_graph_def,
                                                               output_node_names=output_nodes)
 
+            # Write serialized string into frozen protobuf file.
             with tf.gfile.GFile(frozen_file, mode='wb') as f:
                 f.write(output_graph_def.SerializeToString())
 
