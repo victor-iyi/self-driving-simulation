@@ -109,85 +109,84 @@ def train(args):
 
     model = Model(args)
     predictions = model(features)
-    print(predictions)
 
-    # loss = loss_fn(predictions, labels)
-    # tf.summary.scalar('loss', loss)
-    #
-    # # Minimize loss (train the model).
-    # optimizer = tf.train.RMSPropOptimizer(learning_rate=args.learning_rate)
-    # global_step = tf.train.get_or_create_global_step()
-    # train_op = optimizer.minimize(loss=loss, global_step=global_step,
-    #                               name='train_op')
-    # merged = tf.summary.merge_all()
-    #
-    # with tf.Session() as sess:
-    #     # Initialize global variables.
-    #     init = tf.global_variables_initializer()
-    #
-    #     save_dir = os.path.dirname(args.save_path)
-    #
-    #     saver = tf.train.Saver()
-    #     writer = tf.summary.FileWriter(logdir=args.log_dir, graph=sess.graph)
-    #
-    #     # DEBUGGING:
-    #     # sess.run([init, iterator.initializer])
-    #     # _p, _l, _lo = sess.run([predictions, labels, loss])
-    #     # print('Predictions', _p)
-    #     # print('Labels', _l)
-    #     # print('Loss', _lo)
-    #
-    #     if tf.gfile.Exists(save_dir):
-    #         try:
-    #             ckpt_path = tf.train.latest_checkpoint(save_dir)
-    #             saver.restore(sess=sess, save_path=ckpt_path)
-    #             logging.info('Restored checkpoint from {}'.format(ckpt_path))
-    #         except Exception:
-    #             logging.warning('Could not load checkpoint. Initializing global variables.')
-    #             sess.run(init)
-    #     else:
-    #         # Create checkpoint directory.
-    #         tf.gfile.MakeDirs(save_dir)
-    #
-    #         # Initialize global variables.
-    #         logging.info('No checkpoint. Initializing global variables.')
-    #         sess.run(init)
-    #
-    #     for epoch in range(args.epochs):
-    #         try:
-    #             # Run dataset initializer.
-    #             sess.run(iterator.initializer)
-    #             while True:
-    #                 try:
-    #                     # Run train operation.
-    #                     _, _step, _loss = sess.run([train_op, global_step, loss])
-    #
-    #                     print('\rEpoch: {:,} Step: {:,} Loss: {:.2f}'
-    #                           .format(epoch, _step, _loss), end='')
-    #
-    #                     if _step % args.log_every == 0:
-    #                         summary = sess.run(merged)
-    #                         writer.add_summary(summary, global_step=_step)
-    #
-    #                     if _step % args.save_every == 0:
-    #                         print('\n{0}\nSaving model...'.format('-' * 55))
-    #                         saver.save(sess=sess, save_path=args.save_path,
-    #                                    global_step=global_step)
-    #                         print('{0}\n'.format('-' * 55))
-    #
-    #                 except tf.errors.OutOfRangeError:
-    #                     break
-    #         except KeyboardInterrupt:
-    #             print('\n{0}\nTraining interrupted by user!'.format('-' * 55))
-    #             print('Saving model to {}'.format(args.save_path))
-    #
-    #             saver.save(sess=sess, save_path=args.save_path,
-    #                        global_step=global_step)
-    #
-    #             print('{0}\n'.format('-' * 55))
-    #
-    #             # !- End training.
-    #             break
+    loss = loss_fn(predictions, labels)
+    tf.summary.scalar('loss', loss)
+
+    # Minimize loss (train the model).
+    optimizer = tf.train.RMSPropOptimizer(learning_rate=args.learning_rate)
+    global_step = tf.train.get_or_create_global_step()
+    train_op = optimizer.minimize(loss=loss, global_step=global_step,
+                                  name='train_op')
+    merged = tf.summary.merge_all()
+
+    with tf.Session() as sess:
+        # Initialize global variables.
+        init = tf.global_variables_initializer()
+
+        save_dir = os.path.dirname(args.save_path)
+
+        saver = tf.train.Saver()
+        writer = tf.summary.FileWriter(logdir=args.log_dir, graph=sess.graph)
+
+        # DEBUGGING:
+        # sess.run([init, iterator.initializer])
+        # _p, _l, _lo = sess.run([predictions, labels, loss])
+        # print('Predictions', _p)
+        # print('Labels', _l)
+        # print('Loss', _lo)
+
+        if tf.gfile.Exists(save_dir):
+            try:
+                ckpt_path = tf.train.latest_checkpoint(save_dir)
+                saver.restore(sess=sess, save_path=ckpt_path)
+                logging.info('Restored checkpoint from {}'.format(ckpt_path))
+            except Exception:
+                logging.warning('Could not load checkpoint. Initializing global variables.')
+                sess.run(init)
+        else:
+            # Create checkpoint directory.
+            tf.gfile.MakeDirs(save_dir)
+
+            # Initialize global variables.
+            logging.info('No checkpoint. Initializing global variables.')
+            sess.run(init)
+
+        for epoch in range(args.epochs):
+            try:
+                # Run dataset initializer.
+                sess.run(iterator.initializer)
+                while True:
+                    try:
+                        # Run train operation.
+                        _, _step, _loss = sess.run([train_op, global_step, loss])
+
+                        print('\rEpoch: {:,} Step: {:,} Loss: {:.2f}'
+                              .format(epoch, _step, _loss), end='')
+
+                        if _step % args.log_every == 0:
+                            summary = sess.run(merged)
+                            writer.add_summary(summary, global_step=_step)
+
+                        if _step % args.save_every == 0:
+                            print('\n{0}\nSaving model...'.format('-' * 55))
+                            saver.save(sess=sess, save_path=args.save_path,
+                                       global_step=global_step)
+                            print('{0}\n'.format('-' * 55))
+
+                    except tf.errors.OutOfRangeError:
+                        break
+            except KeyboardInterrupt:
+                print('\n{0}\nTraining interrupted by user!'.format('-' * 55))
+                print('Saving model to {}'.format(args.save_path))
+
+                saver.save(sess=sess, save_path=args.save_path,
+                           global_step=global_step)
+
+                print('{0}\n'.format('-' * 55))
+
+                # !- End training.
+                break
 
 
 if __name__ == '__main__':

@@ -63,16 +63,17 @@ def freeze(ckpt_dir: str, output_nodes: list, **kwargs):
         raise NotADirectoryError('Directory does not exist! {}'.format(ckpt_dir))
 
     # Check `output_nodes` isn't empty.
-    if output_nodes is []:
-        raise ValueError('`output_nodes` must contain at least one valid node name.')
+    if not all(output_nodes):
+        raise ValueError('{} must contain at least one valid node name.'
+                         .format(output_nodes))
 
     # Allow TensorFlow to control on loading, where it wants operations to be calculated.
     clear_devices = kwargs.get('clear_devices') or True
 
     # Destination frozen file name.
     frozen_file = kwargs.get('frozen_file') or 'saved/frozen/model.pb'
-    frozen_file = os.path.abspath((frozen_file if frozen_file.endswith('.pb')
-                                   else '{}.pb'.format(frozen_file)))
+    frozen_file = (frozen_file if frozen_file.endswith('.pb')
+                   else '{}.pb'.format(frozen_file))
 
     # If the frozen path is not a directory, create it.
     if not tf.gfile.IsDirectory(os.path.dirname(frozen_file)):
@@ -116,12 +117,17 @@ def _str2list(string: str):
 
 if __name__ == '__main__':
     # Command line arguments.
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
 
+    # File & directory arguments.
     parser.add_argument('-d', dest='ckpt_dir', type=str, default='./saved/models/',
                         help='Directory containing checkpoint files.')
-    parser.add_argument('-f', dest='frozen_file', type=str, default='./saved/frozen/nvidia.pb')
+    parser.add_argument('-f', dest='frozen_file', type=str, default='./saved/frozen/nvidia.pb',
+                        help='Path to a protobuf file (.pb), where frozen model is saved.')
 
+    # Graph control arguments.
     parser.add_argument('-o', dest='output_nodes', type=_str2list,
                         default='model/model/layers/prediction/dense/BiasAdd',
                         help='What are the names of useful output nodes for inference (or metrics). '
