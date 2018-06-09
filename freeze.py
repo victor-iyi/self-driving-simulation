@@ -15,7 +15,7 @@
      Copyright (c) 2018. Victor I. Afolabi. All rights reserved.
 """
 import argparse
-import os
+import os.path
 
 import tensorflow as tf
 from tensorflow.python.framework.graph_util import convert_variables_to_constants
