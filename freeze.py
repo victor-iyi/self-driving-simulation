@@ -25,8 +25,13 @@ def freeze(ckpt_dir: str, output_nodes: list, **kwargs):
     """Freeze a given model from it's checkpoint.
 
     Args:
-        ckpt_dir ():
-        output_nodes ():
+        ckpt_dir (str): Path to a checkpoint directory. Checkpoint directory
+            must contain: "*.data-XXX-of-XXX", "*.index" and "*.meta" files.
+
+        output_nodes (list): A list of (at least one) valid node names.
+            Operations after this node will be pruned. A good rule of thumb is to
+            specify nodes for output predictions, and/or accuracy.
+            Eg: ['model/model/layers/prediction/dense/BiasAdd']
 
     Keyword Args:
         frozen_file (str): Path to a protobuf file (.pb) otherwise it appends it.
@@ -34,6 +39,19 @@ def freeze(ckpt_dir: str, output_nodes: list, **kwargs):
         clear_devices (bool): Allow TensorFlow to control loading, where it wants
             operations to be calculated. (default {True})
 
+    Examples:
+        ```python
+        >>> ckpt_dir = 'saved/models/'
+        >>> output_nodes = ['model/model/layers/prediction/dense/BiasAdd']
+        >>> frozen_file = 'saved/frozen/model.pb'
+        >>> freeze(ckpt_dir=ckpt_dir,
+        ...        output_nodes=output_nodes,
+        ...        frozen_file=frozen_file)
+        >>>
+        Converted 18 variables to const ops.
+        Frozen model saved to "./saved/frozen/model.pb".
+        95 nodes (ops) in the final output graph.
+        ```
 
     Raises:
         NotADirectoryError:
@@ -43,6 +61,10 @@ def freeze(ckpt_dir: str, output_nodes: list, **kwargs):
     # Make sure `ckpt_dir` is a directory & exists.
     if not tf.gfile.IsDirectory(ckpt_dir):
         raise NotADirectoryError('Directory does not exist! {}'.format(ckpt_dir))
+
+    # Check `output_nodes` isn't empty.
+    if output_nodes is []:
+        raise ValueError('`output_nodes` must contain at least one valid node name.')
 
     # Allow TensorFlow to control on loading, where it wants operations to be calculated.
     clear_devices = kwargs.get('clear_devices') or True
@@ -81,10 +103,10 @@ def freeze(ckpt_dir: str, output_nodes: list, **kwargs):
             # Write serialized string into frozen protobuf file.
             with tf.gfile.GFile(frozen_file, mode='wb') as f:
                 f.write(output_graph_def.SerializeToString())
-
-            print('{:,} ops in the final output graph'.format(len(output_graph_def.node)))
+            print('Frozen model saved to "{}".'.format(frozen_file))
+            print('{:,} nodes (ops) in the final output graph.'.format(len(output_graph_def.node)))
         except AssertionError as e:
-            print('ERROR: {}'.format(e))
+            print('ERROR: {}.'.format(e))
 
 
 def _str2list(string: str):
