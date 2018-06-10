@@ -54,8 +54,6 @@ class Drive:
         # (1 - A^2) - (s/L)^2
         throttle = 1.0 - steering_angle ** 2 - (throttle / self._speed_limit) ** 2
 
-        print('{:.3f}'.format(throttle), end='\t\t')
-
         sio.emit(
             event="steer",
             data={
@@ -66,12 +64,11 @@ class Drive:
         )
 
     def telemetry(self, sid, data):
-        # print(sid)
-        # print(data)
         # Collect data.
         steering_angle = float(data['steering_angle'])
         throttle = float(data['throttle'])
 
+        # Drive the car with these parameters.
         self.drive(steering_angle, throttle)
 
     def predict(self, image):
