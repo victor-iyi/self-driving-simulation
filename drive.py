@@ -24,6 +24,7 @@ from flask import Flask
 
 # Helper file to load frozen model.
 from frozen_model import load
+from data import create_tiny_dataset
 
 # Global objects.
 sio, driver = socketio.Server(), None
@@ -72,7 +73,26 @@ class Drive:
         self.drive(steering_angle, throttle)
 
     def predict(self, image):
-        pass
+        # out_tensor_name = "nvidia/model/layers/output/BiasAdd:0"
+        # prediction = self.graph.get_tensor_by_name(out_tensor_name)
+        # feed_dict = {}
+        # self.sess.run(prediction, feed_dict=feed_dict)
+        # print(prediction)
+        # dataset = create_tiny_dataset((image,))
+        # print(dataset)
+
+        iter_op = self.graph.get_operation_by_name('nvidia/Iterator')
+        print(self.sess.run(iter_op.values()))
+        # print(iter_op.values())
+
+        get_next = self.graph.get_operation_by_name('nvidia/IteratorGetNext')
+        print(get_next.values())
+        # iter_val = iter_op.values()[0]
+        img_tensor = get_next.values()[0]
+        print(self.sess.run(img_tensor))
+
+        # for op in self.graph.get_operations():
+        #     print('{}\n'.format(op.name))
 
 
 @sio.on("connect")
@@ -108,12 +128,13 @@ if __name__ == '__main__':
 
     # Driver object.
     driver = Drive(model_path=args.model_path)
+    driver.predict('')
 
-    # Flask app.
-    app = Flask(__name__)
-
-    # SocketIO as a middleware.
-    app = socketio.Middleware(socketio_app=sio, wsgi_app=app)
-
-    # Start eventlet server, listen on port 4567.
-    eventlet.wsgi.server(eventlet.listen(('', 4567)), app)
+    # # Flask app.
+    # app = Flask(__name__)
+    #
+    # # SocketIO as a middleware.
+    # app = socketio.Middleware(socketio_app=sio, wsgi_app=app)
+    #
+    # # Start eventlet server, listen on port 4567.
+    # eventlet.wsgi.server(eventlet.listen(('', 4567)), app)

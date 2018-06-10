@@ -21,8 +21,7 @@ import os.path
 import tensorflow as tf
 
 import data
-from utils import Keys
-
+from utils import Keys, Collection
 
 # Logging configurations.
 FORMAT = '[%(name)s:%(lineno)d] %(levelname)s: %(message)s'
@@ -125,29 +124,32 @@ def train(args):
         label_plhd = tf.placeholder_with_default(input=default_label,
                                                  shape=(None,), name="labels")
 
+        # Add placeholder to collections.
+        tf.add_to_collection(Collection.PLACEHOLDERS, img_plhd)
+        tf.add_to_collection(Collection.PLACEHOLDERS, label_plhd)
+
     with tf.name_scope('data'):
         with tf.name_scope('dataset'):
             train_data = data.make_dataset(img_plhd, label_plhd)
-            pred_data = data.make_dataset(img_plhd, label_plhd, batch_size=1)
+            # pred_data = data.make_dataset(img_plhd, label_plhd, batch_size=1)
 
         with tf.name_scope('iterator'):
-            iterator = tf.data.Iterator.from_structure(output_types=pred_data.output_types,  # !-
+            iterator = tf.data.Iterator.from_structure(output_types=train_data.output_types,  # !-
                                                        output_shapes=train_data.output_shapes)
             dataset = iterator.get_next()
 
         with tf.name_scope('initializer'):
             train_data_init = iterator.make_initializer(train_data,
                                                         name="train_data")
-            pred_data_init = iterator.make_initializer(pred_data,
-                                                       name="pred_data")
-
-            # Needed for inference.
-            tf.add_to_collection("data", pred_data_init)
-    collections = tf.get_collection("data")
-    print(collections)
+            # pred_data_init = iterator.make_initializer(pred_data,
+            #                                            name="pred_data")
     model = Model(args)
 
     predictions = model(dataset[Keys.IMAGES])
+
+    # Add to collections.
+    tf.add_to_collection(Collection.MODEL, model)
+    tf.add_to_collection(Collection.PREDICTION, predictions)
 
     loss = loss_fn(predictions, dataset[Keys.LABELS])
 

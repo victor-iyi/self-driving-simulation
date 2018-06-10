@@ -25,3 +25,14 @@ class Keys:
 
     # Initializer keys.
     DATA_INIT = "data_initializer"
+
+
+class Collection:
+    # Convenience placeholder collections.
+    PLACEHOLDERS = "placeholders"
+
+    # Model collections.
+    MODEL = "model"
+
+    # Store model prediction in this collection for easy retrieval.
+    PREDICTION = "predictions"
