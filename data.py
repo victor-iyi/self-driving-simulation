@@ -127,6 +127,7 @@ def make_dataset(features: np.ndarray, labels: np.ndarray = None, **kwargs):
     buffer_size = kwargs.get('buffer_size') or 1000
     batch_size = kwargs.get('batch_size') or 128
 
+    print(labels)
     # Change map function depending on parameters.
     map_fn = _parser if labels is not None else _img_func
 

@@ -116,7 +116,8 @@ def train(args):
     with tf.name_scope('placeholders'):
         img_plhd = tf.placeholder(tf.string, shape=(None,), name="image")
 
-        default_label = np.zeros(shape=(1,), dtype=np.float32)
+        default_label = tf.zeros_like(img_plhd, dtype=tf.float32,
+                                      name="default_labels")
 
         # For predictions: when no labels, create arbitrary label.
         label_plhd = tf.placeholder_with_default(input=default_label,
@@ -153,16 +154,15 @@ def train(args):
 
         # DEBUGGING:
         filenames, targets = load_data(CSV_FILENAME)
-        print(filenames)
-        feed_dict = {img_plhd: filenames}
+        feed_dict = {img_plhd: filenames, label_plhd: targets}
 
         train_init = iterator.make_initializer(train_dataset,
                                                name="train_dataset")
         sess.run(train_init, feed_dict=feed_dict)
 
-        # _p, _lo = sess.run([predictions, loss])
-        _p = sess.run(predictions)
-        print('Predictions', _p)
+        # # _p, _lo = sess.run([predictions, loss])
+        # _p = sess.run(predictions)
+        # print('Predictions', _p)
         # print('Loss', _lo)
 
         # save_dir = os.path.dirname(args.save_path)
