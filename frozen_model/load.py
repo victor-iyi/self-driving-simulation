@@ -35,8 +35,9 @@ def load(frozen_file: str, **kwargs):
             `graph_def` that will be returned as `Operation` objects; and/or
             tensor names in `graph_def` that will be returned as `Tensor` objects.
 
-        name: (Optional.) A prefix that will be prepended to the names in
-            `graph_def`. Note that this does not apply to imported function names.
+        prefix: (Optional.) A prefix that will be prepended to the names in
+            `graph_def`. If not provided, it'll be inferred from `froze_file` path.
+            Note that this does not apply to imported function names.
             (default {"import"}).
 
         producer_op_list: (Optional.) An `OpList` proto with the (possibly stripped)
@@ -69,6 +70,9 @@ def load(frozen_file: str, **kwargs):
     if not tf.gfile.Exists(frozen_file):
         raise FileNotFoundError('{} was not found.'.format(frozen_file))
 
+    # Prefix to node names.
+    prefix = kwargs.get('prefix') or frozen_file.split('/')[-1].split('.')[0]
+
     # Read the protobuf graph
     with tf.gfile.GFile(frozen_file, mode='rb') as f:
         graph_def = tf.GraphDef()
@@ -76,9 +80,6 @@ def load(frozen_file: str, **kwargs):
 
     # Load graph_def into default graph
     with tf.Graph().as_default() as graph:
-        # Prefix to node names.
-        prefix = frozen_file.split('/')[-1].split('.')[0]
-
         # Import graph def to default graph.
         tf.import_graph_def(graph_def=graph_def, name=prefix, **kwargs)
 

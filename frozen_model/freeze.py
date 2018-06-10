@@ -42,21 +42,24 @@ def freeze(ckpt_dir: str, output_nodes: list, **kwargs):
     Examples:
         ```python
         >>> ckpt_dir = 'saved/models/'
-        >>> output_nodes = ['model/model/layers/prediction/dense/BiasAdd']
+        >>> output_nodes = ['model/layers/prediction/dense/BiasAdd']
         >>> frozen_file = 'saved/frozen/model.pb'
-        >>> freeze(ckpt_dir=ckpt_dir,
-        ...        output_nodes=output_nodes,
-        ...        frozen_file=frozen_file)
-        >>>
+        >>> file = freeze(ckpt_dir=ckpt_dir,
+        ...               output_nodes=output_nodes,
+        ...               frozen_file=frozen_file)
         Converted 18 variables to const ops.
         Frozen model saved to "./saved/frozen/model.pb".
         95 nodes (ops) in the final output graph.
+        >>> print('Saved to "{}"'.format(file))
+        Saved to "saved/frozen/model.pb"
         ```
 
     Raises:
         NotADirectoryError:
             Directory does not exist! `ckpt_dir`
 
+    Returns:
+        str: Frozen file path.
     """
     # Make sure `ckpt_dir` is a directory & exists.
     if not tf.gfile.IsDirectory(ckpt_dir):
@@ -106,8 +109,11 @@ def freeze(ckpt_dir: str, output_nodes: list, **kwargs):
                 f.write(output_graph_def.SerializeToString())
             print('Frozen model saved to "{}".'.format(frozen_file))
             print('{:,} nodes (ops) in the final output graph.'.format(len(output_graph_def.node)))
+
+            return frozen_file
+
         except AssertionError as e:
-            print('ERROR: {}.'.format(e))
+            raise Exception('ERROR: {}'.format(e))
 
 
 def _str2list(string: str):
