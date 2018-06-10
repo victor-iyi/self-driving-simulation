@@ -81,18 +81,18 @@ class Drive:
         # dataset = create_tiny_dataset((image,))
         # print(dataset)
 
-        iter_op = self.graph.get_operation_by_name('nvidia/Iterator')
-        print(self.sess.run(iter_op.values()))
-        # print(iter_op.values())
+        # iter_op = self.graph.get_operation_by_name('nvidia/Iterator')
+        # print(self.sess.run(iter_op.values()))
+        # # print(iter_op.values())
+        #
+        # get_next = self.graph.get_operation_by_name('nvidia/IteratorGetNext')
+        # print(get_next.values())
+        # # iter_val = iter_op.values()[0]
+        # img_tensor = get_next.values()[0]
+        # print(self.sess.run(img_tensor))
 
-        get_next = self.graph.get_operation_by_name('nvidia/IteratorGetNext')
-        print(get_next.values())
-        # iter_val = iter_op.values()[0]
-        img_tensor = get_next.values()[0]
-        print(self.sess.run(img_tensor))
-
-        # for op in self.graph.get_operations():
-        #     print('{}\n'.format(op.name))
+        for op in self.graph.get_all_collection_keys():
+            print('{}\n'.format(op))
 
 
 @sio.on("connect")

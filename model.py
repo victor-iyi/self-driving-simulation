@@ -147,8 +147,7 @@ def train(args):
 
     predictions = model(dataset[Keys.IMAGES])
 
-    # Add to collections.
-    tf.add_to_collection(Collection.MODEL, model)
+    # # Add to collections.
     tf.add_to_collection(Collection.PREDICTION, predictions)
 
     loss = loss_fn(predictions, dataset[Keys.LABELS])

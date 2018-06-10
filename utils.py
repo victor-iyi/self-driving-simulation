@@ -31,8 +31,5 @@ class Collection:
     # Convenience placeholder collections.
     PLACEHOLDERS = "collection_placeholders"
 
-    # Model collections.
-    MODEL = "collection_model"
-
     # Store model prediction in this collection for easy retrieval.
     PREDICTION = "collection_predictions"
