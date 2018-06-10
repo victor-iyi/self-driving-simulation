@@ -14,3 +14,14 @@
      MIT License
      Copyright (c) 2018. Victor I. Afolabi. All rights reserved.
 """
+
+
+class Keys:
+    """For consistent naming of strings."""
+
+    # Data keys.
+    LABELS = "labels"
+    IMAGES = "images"
+
+    # Initializer keys.
+    DATA_INIT = "data_initializer"

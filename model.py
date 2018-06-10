@@ -21,14 +21,15 @@ import os.path
 import tensorflow as tf
 
 import data
-logger = logging.Logger(__name__, level=logging.DEBUG)
+from utils import Keys
+
+
 # Logging configurations.
 FORMAT = '[%(name)s:%(lineno)d] %(levelname)s: %(message)s'
 logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 tf.logging.set_verbosity(tf.logging.WARN)
 
 
-# noinspection PyAbstractClass
 class Model(tf.keras.Model):
     def __init__(self, args):
         super(Model, self).__init__()
@@ -58,39 +59,50 @@ class Model(tf.keras.Model):
         self.dense3 = tf.keras.layers.Dense(units=10, activation='elu')
 
         # Prediction / Output layer.
-        self.pred_layer = tf.keras.layers.Dense(units=1)
+        self.pred_layer = tf.keras.layers.Dense(units=1, name="output")
 
     def __call__(self, inputs, *args, **kwargs):
         return super().__call__(inputs, *args, **kwargs)
 
     def call(self, inputs, **kwargs):
-        with tf.name_scope('model'):
-            # Network layers.
-            with tf.name_scope('layers'):
-                # Input layer.
-                with tf.name_scope('input'):
-                    net = tf.reshape(inputs,
-                                     shape=(-1, self.args.img_size,
-                                            self.args.img_size, self.args.img_depth),
-                                     name='reshape')
+        # Network layers.
+        with tf.name_scope('layers'):
+            # Input layer.
+            with tf.name_scope('input'):
+                net = tf.reshape(inputs,
+                                 shape=(-1, self.args.img_size,
+                                        self.args.img_size, self.args.img_depth),
+                                 name='reshape')
 
-                # Convolutional layers.
-                with tf.name_scope('feature_extraction'):
-                    net = self.conv2(self.conv1(net))
-                    net = self.conv4(self.conv3(net))
-                    net = self.conv5(net)
+            # Convolutional layers.
+            with tf.name_scope('feature_extraction'):
+                net = self.conv2(self.conv1(net))
+                net = self.conv4(self.conv3(net))
+                net = self.conv5(net)
 
-                # Fully connected / Dense layers.
-                with tf.name_scope('fully_connected'):
-                    net = self.flatten(net)
-                    net = self.dense1(self.dropout(net))
-                    net = self.dense3(self.dense2(net))
+            # Fully connected / Dense layers.
+            with tf.name_scope('fully_connected'):
+                net = self.flatten(net)
+                net = self.dense1(self.dropout(net))
+                net = self.dense3(self.dense2(net))
 
-                # Prediction / Output layer.
-                with tf.name_scope('prediction'):
-                    net = self.pred_layer(net)
+            # Prediction / Output layer.
+            net = self.pred_layer(net)
 
         return net
+
+    def add_variable(self, name, shape, dtype=None, initializer=None,
+                     regularizer=None, trainable=True, constraint=None, **kwargs):
+        pass
+
+    def save(self, filepath, overwrite=True, include_optimizer=True):
+        pass
+
+    def add_loss(self, *args, **kwargs):
+        pass
+
+    def _set_inputs(self, inputs, training=None):
+        pass
 
 
 def loss_fn(predictions, labels):
@@ -103,14 +115,42 @@ def loss_fn(predictions, labels):
 
 
 def train(args):
-    dataset = data.load_data(**vars(args))
-    iterator = dataset.make_initializable_iterator()
-    features, labels = iterator.get_next()
+    with tf.name_scope('placeholders'):
+        img_plhd = tf.placeholder(tf.string, shape=(None,), name="image")
 
+        default_label = tf.zeros_like(img_plhd, dtype=tf.float32,
+                                      name="default_labels")
+
+        # For predictions: when no labels, create arbitrary label.
+        label_plhd = tf.placeholder_with_default(input=default_label,
+                                                 shape=(None,), name="labels")
+
+    with tf.name_scope('data'):
+        with tf.name_scope('dataset'):
+            train_data = data.make_dataset(img_plhd, label_plhd)
+            pred_data = data.make_dataset(img_plhd, label_plhd, batch_size=1)
+
+        with tf.name_scope('iterator'):
+            iterator = tf.data.Iterator.from_structure(output_types=pred_data.output_types,  # !-
+                                                       output_shapes=train_data.output_shapes)
+            dataset = iterator.get_next()
+
+        with tf.name_scope('initializer'):
+            train_data_init = iterator.make_initializer(train_data,
+                                                        name="train_data")
+            pred_data_init = iterator.make_initializer(pred_data,
+                                                       name="pred_data")
+
+            # Needed for inference.
+            tf.add_to_collection("data", pred_data_init)
+    collections = tf.get_collection("data")
+    print(collections)
     model = Model(args)
-    predictions = model(features)
 
-    loss = loss_fn(predictions, labels)
+    predictions = model(dataset[Keys.IMAGES])
+
+    loss = loss_fn(predictions, dataset[Keys.LABELS])
+
     tf.summary.scalar('loss', loss)
 
     # Minimize loss (train the model).
@@ -124,17 +164,26 @@ def train(args):
         # Initialize global variables.
         init = tf.global_variables_initializer()
 
+        # DEBUGGING:
+        sess.run(init)
+        filenames, targets = data.load_data(data.CSV_FILENAME)
+        feed_dict = {img_plhd: filenames, label_plhd: targets}
+
+        train_init = iterator.make_initializer(train_data,
+                                               name="train_data")
+        sess.run(train_init, feed_dict=feed_dict)
+
+        # _p = sess.run(predictions)
+        # print('Predictions', _p)
+        # _p, _lo = sess.run([predictions, loss])
+        # print('Predictions', _p)
+        # print('Loss', _lo)
+
+        # Saved model directory.
         save_dir = os.path.dirname(args.save_path)
 
         saver = tf.train.Saver()
         writer = tf.summary.FileWriter(logdir=args.log_dir, graph=sess.graph)
-
-        # DEBUGGING:
-        # sess.run([init, iterator.initializer])
-        # _p, _l, _lo = sess.run([predictions, labels, loss])
-        # print('Predictions', _p)
-        # print('Labels', _l)
-        # print('Loss', _lo)
 
         if tf.gfile.Exists(save_dir):
             try:
@@ -152,16 +201,21 @@ def train(args):
             logging.info('No checkpoint. Initializing global variables.')
             sess.run(init)
 
+        # Real training data.
+        filenames, targets = data.load_data(data.CSV_FILENAME)
+        feed_dict = {img_plhd: filenames, label_plhd: targets}
+
         for epoch in range(args.epochs):
             try:
                 # Run dataset initializer.
-                sess.run(iterator.initializer)
+                sess.run(train_data_init, feed_dict=feed_dict)
+
                 while True:
                     try:
                         # Run train operation.
                         _, _step, _loss = sess.run([train_op, global_step, loss])
 
-                        print('\rEpoch: {:,} Step: {:,} Loss: {:.2f}'
+                        print('\rEpoch: {:,} Step: {:,} Loss: {:,.2f}'
                               .format(epoch, _step, _loss), end='')
 
                         if _step % args.log_every == 0:
@@ -193,13 +247,16 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # Data dimension.
-    parser.add_argument('-channels', dest='img_depth', type=int, default=3,
+    parser.add_argument('-c', dest='img_depth', type=int, default=3,
                         help='Image channels. One of (None, 0, 1, 2, 3 or 4)')
-    parser.add_argument('-img_size', dest='img_size', type=int, default=32,
+    parser.add_argument('--img_size', dest='img_size', type=int, default=32,
                         help='Size of input image to the network.')
 
-    parser.add_argument('-b', dest='batch_size', type=int, default=64,
+    parser.add_argument('-b', '--batch_size', dest='batch_size', type=int, default=64,
                         help='Mini-batch size.')
+    parser.add_argument('-buf', '--buffer_size', dest='buffer_size', type=int, default=500,
+                        help='Size of data buffer to randomly shuffle at a time.')
+
     parser.add_argument('-dr', dest='dropout', type=float, default=0.5,
                         help='Dropout rate. Probability of randomly turning off neurons.')
     parser.add_argument('-lr', dest='learning_rate', type=float, default=1e-2,
@@ -214,11 +271,11 @@ if __name__ == '__main__':
                         help='Number of training epochs.')
 
     # Data & checkpoint arguments.
-    parser.add_argument('-log', dest='log_dir', type=str, default='./saved/logs/',
+    parser.add_argument('-log', '--logdir', dest='log_dir', type=str, default='saved/logs/',
                         help='Path to write Tensorboard event logs.')
     parser.add_argument('-d', dest='data_dir', type=str, default='./simulations/',
                         help='Directory where simulated data is stored.')
-    parser.add_argument('-s', dest='save_path', type=str, default='./saved/models/nvidia.ckpt',
+    parser.add_argument('-s', dest='save_path', type=str, default='saved/models/nvidia.ckpt',
                         help='Checkpoint saved path.')
 
     # Parsed arguments.
@@ -230,6 +287,6 @@ if __name__ == '__main__':
     print('{}\n'.format('-' * 55))
 
     # Update data directory.
-    data.data_dir = args.data_dir
+    data_dir = args.data_dir
 
     train(args=args)
