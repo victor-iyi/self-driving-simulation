@@ -129,8 +129,12 @@ def train(args):
     iterator = tf.data.Iterator.from_structure(output_types=pred_dataset.output_types,  # !-
                                                output_shapes=train_dataset.output_shapes)
 
+    train_data_init = iterator.make_initializer(train_dataset,
+                                                name="train_dataset")
+    pred_data_init = iterator.make_initializer(pred_dataset,
+                                               name="pred_dataset")
+
     data = iterator.get_next()
-    print(data)
 
     model = Model(args)
 
@@ -150,82 +154,84 @@ def train(args):
     with tf.Session() as sess:
         # Initialize global variables.
         init = tf.global_variables_initializer()
-        sess.run(init)
 
         # DEBUGGING:
-        filenames, targets = load_data(CSV_FILENAME)
-        feed_dict = {img_plhd: filenames, label_plhd: targets}
-
-        train_init = iterator.make_initializer(train_dataset,
-                                               name="train_dataset")
-        sess.run(train_init, feed_dict=feed_dict)
-
-        # # _p, _lo = sess.run([predictions, loss])
-        # _p = sess.run(predictions)
-        # print('Predictions', _p)
-        # print('Loss', _lo)
-
-        # save_dir = os.path.dirname(args.save_path)
-        #
-        # saver = tf.train.Saver()
-        # writer = tf.summary.FileWriter(logdir=args.log_dir, graph=sess.graph)
-
-        # if tf.gfile.Exists(save_dir):
-        #     try:
-        #         ckpt_path = tf.train.latest_checkpoint(save_dir)
-        #         saver.restore(sess=sess, save_path=ckpt_path)
-        #         logging.info('Restored checkpoint from {}'.format(ckpt_path))
-        #     except Exception:
-        #         logging.warning('Could not load checkpoint. Initializing global variables.')
-        #         sess.run(init)
-        # else:
-        #     # Create checkpoint directory.
-        #     tf.gfile.MakeDirs(save_dir)
-        #
-        #     # Initialize global variables.
-        #     logging.info('No checkpoint. Initializing global variables.')
-        #     sess.run(init)
-        #
-        # # Real training data.
+        # sess.run(init)
         # filenames, targets = load_data(CSV_FILENAME)
         # feed_dict = {img_plhd: filenames, label_plhd: targets}
         #
-        # for epoch in range(args.epochs):
-        #     try:
-        #         # Run dataset initializer.
-        #         sess.run(iterator.initializer, feed_dict=feed_dict)
+        # train_init = iterator.make_initializer(train_dataset,
+        #                                        name="train_dataset")
+        # sess.run(train_init, feed_dict=feed_dict)
         #
-        #         while True:
-        #             try:
-        #                 # Run train operation.
-        #                 _, _step, _loss = sess.run([train_op, global_step, loss])
-        #
-        #                 print('\rEpoch: {:,} Step: {:,} Loss: {:.2f}'
-        #                       .format(epoch, _step, _loss), end='')
-        #
-        #                 if _step % args.log_every == 0:
-        #                     summary = sess.run(merged)
-        #                     writer.add_summary(summary, global_step=_step)
-        #
-        #                 if _step % args.save_every == 0:
-        #                     print('\n{0}\nSaving model...'.format('-' * 55))
-        #                     saver.save(sess=sess, save_path=args.save_path,
-        #                                global_step=global_step)
-        #                     print('{0}\n'.format('-' * 55))
-        #
-        #             except tf.errors.OutOfRangeError:
-        #                 break
-        #     except KeyboardInterrupt:
-        #         print('\n{0}\nTraining interrupted by user!'.format('-' * 55))
-        #         print('Saving model to {}'.format(args.save_path))
-        #
-        #         saver.save(sess=sess, save_path=args.save_path,
-        #                    global_step=global_step)
-        #
-        #         print('{0}\n'.format('-' * 55))
-        #
-        #         # !- End training.
-        #         break
+        # # _p = sess.run(predictions)
+        # # print('Predictions', _p)
+        # _p, _lo = sess.run([predictions, loss])
+        # print('Predictions', _p)
+        # print('Loss', _lo)
+
+        # Saved model directory.
+        save_dir = os.path.dirname(args.save_path)
+
+        saver = tf.train.Saver()
+        writer = tf.summary.FileWriter(logdir=args.log_dir, graph=sess.graph)
+
+        if tf.gfile.Exists(save_dir):
+            try:
+                ckpt_path = tf.train.latest_checkpoint(save_dir)
+                saver.restore(sess=sess, save_path=ckpt_path)
+                logging.info('Restored checkpoint from {}'.format(ckpt_path))
+            except Exception:
+                logging.warning('Could not load checkpoint. Initializing global variables.')
+                sess.run(init)
+        else:
+            # Create checkpoint directory.
+            tf.gfile.MakeDirs(save_dir)
+
+            # Initialize global variables.
+            logging.info('No checkpoint. Initializing global variables.')
+            sess.run(init)
+
+        # Real training data.
+        filenames, targets = load_data(CSV_FILENAME)
+        feed_dict = {img_plhd: filenames, label_plhd: targets}
+
+        for epoch in range(args.epochs):
+            try:
+                # Run dataset initializer.
+                sess.run(train_data_init, feed_dict=feed_dict)
+
+                while True:
+                    try:
+                        # Run train operation.
+                        _, _step, _loss = sess.run([train_op, global_step, loss])
+
+                        print('\rEpoch: {:,} Step: {:,} Loss: {:.2f}'
+                              .format(epoch, _step, _loss), end='')
+
+                        if _step % args.log_every == 0:
+                            summary = sess.run(merged)
+                            writer.add_summary(summary, global_step=_step)
+
+                        if _step % args.save_every == 0:
+                            print('\n{0}\nSaving model...'.format('-' * 55))
+                            saver.save(sess=sess, save_path=args.save_path,
+                                       global_step=global_step)
+                            print('{0}\n'.format('-' * 55))
+
+                    except tf.errors.OutOfRangeError:
+                        break
+            except KeyboardInterrupt:
+                print('\n{0}\nTraining interrupted by user!'.format('-' * 55))
+                print('Saving model to {}'.format(args.save_path))
+
+                saver.save(sess=sess, save_path=args.save_path,
+                           global_step=global_step)
+
+                print('{0}\n'.format('-' * 55))
+
+                # !- End training.
+                break
 
 
 if __name__ == '__main__':
