@@ -108,5 +108,6 @@ if __name__ == '__main__':
     # Usage:
     graph = load(frozen_file=args.frozen_file)
 
+
     ops = len(graph.get_operations())
     print('{:,} ops in graph.'.format(ops))
