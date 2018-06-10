@@ -20,7 +20,9 @@ import os.path
 
 import tensorflow as tf
 
-from data import *
+import data
+from utils import Keys
+
 
 # Logging configurations.
 FORMAT = '[%(name)s:%(lineno)d] %(levelname)s: %(message)s'
@@ -123,24 +125,31 @@ def train(args):
         label_plhd = tf.placeholder_with_default(input=default_label,
                                                  shape=(None,), name="labels")
 
-    train_dataset = make_dataset(img_plhd, label_plhd)
-    pred_dataset = make_dataset(img_plhd, label_plhd, batch_size=1)
+    with tf.name_scope('data'):
+        with tf.name_scope('dataset'):
+            train_data = data.make_dataset(img_plhd, label_plhd)
+            pred_data = data.make_dataset(img_plhd, label_plhd, batch_size=1)
 
-    iterator = tf.data.Iterator.from_structure(output_types=pred_dataset.output_types,  # !-
-                                               output_shapes=train_dataset.output_shapes)
+        with tf.name_scope('iterator'):
+            iterator = tf.data.Iterator.from_structure(output_types=pred_data.output_types,  # !-
+                                                       output_shapes=train_data.output_shapes)
+            dataset = iterator.get_next()
 
-    train_data_init = iterator.make_initializer(train_dataset,
-                                                name="train_dataset")
-    pred_data_init = iterator.make_initializer(pred_dataset,
-                                               name="pred_dataset")
+        with tf.name_scope('initializer'):
+            train_data_init = iterator.make_initializer(train_data,
+                                                        name="train_data")
+            pred_data_init = iterator.make_initializer(pred_data,
+                                                       name="pred_data")
 
-    data = iterator.get_next()
-
+            # Needed for inference.
+            tf.add_to_collection("data", pred_data_init)
+    collections = tf.get_collection("data")
+    print(collections)
     model = Model(args)
 
-    predictions = model(data[DataKeys.IMAGES])
+    predictions = model(dataset[Keys.IMAGES])
 
-    loss = loss_fn(predictions, data[DataKeys.LABELS])
+    loss = loss_fn(predictions, dataset[Keys.LABELS])
 
     tf.summary.scalar('loss', loss)
 
@@ -156,16 +165,16 @@ def train(args):
         init = tf.global_variables_initializer()
 
         # DEBUGGING:
-        # sess.run(init)
-        # filenames, targets = load_data(CSV_FILENAME)
-        # feed_dict = {img_plhd: filenames, label_plhd: targets}
-        #
-        # train_init = iterator.make_initializer(train_dataset,
-        #                                        name="train_dataset")
-        # sess.run(train_init, feed_dict=feed_dict)
-        #
-        # # _p = sess.run(predictions)
-        # # print('Predictions', _p)
+        sess.run(init)
+        filenames, targets = data.load_data(data.CSV_FILENAME)
+        feed_dict = {img_plhd: filenames, label_plhd: targets}
+
+        train_init = iterator.make_initializer(train_data,
+                                               name="train_data")
+        sess.run(train_init, feed_dict=feed_dict)
+
+        # _p = sess.run(predictions)
+        # print('Predictions', _p)
         # _p, _lo = sess.run([predictions, loss])
         # print('Predictions', _p)
         # print('Loss', _lo)
@@ -193,7 +202,7 @@ def train(args):
             sess.run(init)
 
         # Real training data.
-        filenames, targets = load_data(CSV_FILENAME)
+        filenames, targets = data.load_data(data.CSV_FILENAME)
         feed_dict = {img_plhd: filenames, label_plhd: targets}
 
         for epoch in range(args.epochs):
@@ -206,7 +215,7 @@ def train(args):
                         # Run train operation.
                         _, _step, _loss = sess.run([train_op, global_step, loss])
 
-                        print('\rEpoch: {:,} Step: {:,} Loss: {:.2f}'
+                        print('\rEpoch: {:,} Step: {:,} Loss: {:,.2f}'
                               .format(epoch, _step, _loss), end='')
 
                         if _step % args.log_every == 0:
