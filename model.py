@@ -20,7 +20,7 @@ import os.path
 
 import tensorflow as tf
 
-import data
+from data import *
 
 # Logging configurations.
 FORMAT = '[%(name)s:%(lineno)d] %(levelname)s: %(message)s'
@@ -29,7 +29,6 @@ tf.logging.set_verbosity(tf.logging.WARN)
 
 
 class Model(tf.keras.Model):
-
     def __init__(self, args):
         super(Model, self).__init__()
 
@@ -114,129 +113,109 @@ def loss_fn(predictions, labels):
 
 
 def train(args):
-    with tf.name_scope("inputs"):
+    with tf.name_scope('placeholders'):
+        img_plhd = tf.placeholder(tf.string, shape=(None,), name="image")
+        label_plhd = tf.placeholder(tf.float32, shape=(None,), name="labels")
 
-        mode = tf.placeholder(dtype=tf.string, shape=(), name="mode")
+    # filenames, labels = load_data(CSV_FILENAME)
 
-        y_plhd = tf.placeholder(dtype=tf.float32, shape=(None,),
-                                name="steer_angle")
+    dataset = make_dataset(img_plhd, label_plhd)
 
-        if mode == tf.estimator.ModeKeys.PREDICT:
-            # Input image
-            img_shape = (1, data.img_size, data.img_size, data.channels)
-            X_plhd = tf.placeholder(tf.float32, shape=img_shape, name="image")
-
-            # Dataset object.
-            dataset = data.make_dataset(X_plhd, batch_size=1)
-        else:
-            # Input filenames & steer angle.
-            X_plhd = tf.placeholder(dtype=tf.string, shape=(None,),
-                                    name="image")
-            # Dataset object.
-            dataset = data.make_dataset(X_plhd, y_plhd,
-                                        batch_size=args.batch_size,
-                                        buffer_size=args.buffer_size)
-
-    # Iterator object.
     iterator = dataset.make_initializable_iterator()
-    features, labels = iterator.get_next()
+    data = iterator.get_next()
+    print(data)
 
     model = Model(args)
-    model.save('model.pb')
-    predictions = model(features)
-    print('Model', model)
-    print('Inputs:', X_plhd)
-    print('Outputs:', predictions)
-    print('Features:', features)
-    print('Labels:', labels)
 
-    # loss = loss_fn(predictions, labels)
-    # tf.summary.scalar('loss', loss)
-    #
-    # # Minimize loss (train the model).
-    # optimizer = tf.train.RMSPropOptimizer(learning_rate=args.learning_rate)
-    # global_step = tf.train.get_or_create_global_step()
-    # train_op = optimizer.minimize(loss=loss, global_step=global_step,
-    #                               name='train_op')
-    # merged = tf.summary.merge_all()
-    #
-    # with tf.Session() as sess:
-    #     # Initialize global variables.
-    #     init = tf.global_variables_initializer()
-    #
-    #     save_dir = os.path.dirname(args.save_path)
-    #
-    #     saver = tf.train.Saver()
-    #     writer = tf.summary.FileWriter(logdir=args.log_dir, graph=sess.graph)
-    #
-    #     # DEBUGGING:
-    #     # filenames, targets = data.load_data(data.CSV_FILENAME)
-    #     # feed_dict = {
-    #     #     mode: tf.estimator.ModeKeys.TRAIN,
-    #     #     X_plhd: filenames, y_plhd: targets,
-    #     # }
-    #     # sess.run([init, iterator.initializer], feed_dict=feed_dict)
-    #     # _p, _l, _lo = sess.run([predictions, labels, loss])
-    #     # print('Predictions', _p)
-    #     # print('Labels', _l)
-    #     # print('Loss', _lo)
-    #
-    #     if tf.gfile.Exists(save_dir):
-    #         try:
-    #             ckpt_path = tf.train.latest_checkpoint(save_dir)
-    #             saver.restore(sess=sess, save_path=ckpt_path)
-    #             logging.info('Restored checkpoint from {}'.format(ckpt_path))
-    #         except Exception:
-    #             logging.warning('Could not load checkpoint. Initializing global variables.')
-    #             sess.run(init)
-    #     else:
-    #         # Create checkpoint directory.
-    #         tf.gfile.MakeDirs(save_dir)
-    #
-    #         # Initialize global variables.
-    #         logging.info('No checkpoint. Initializing global variables.')
-    #         sess.run(init)
-    #
-    #     # Real training data.
-    #     filenames, targets = data.load_data(data.CSV_FILENAME)
-    #     feed_dict = {X_plhd: filenames, y_plhd: targets}
-    #
-    #     for epoch in range(args.epochs):
-    #         try:
-    #             # Run dataset initializer.
-    #             sess.run(iterator.initializer, feed_dict=feed_dict)
-    #
-    #             while True:
-    #                 try:
-    #                     # Run train operation.
-    #                     _, _step, _loss = sess.run([train_op, global_step, loss])
-    #
-    #                     print('\rEpoch: {:,} Step: {:,} Loss: {:.2f}'
-    #                           .format(epoch, _step, _loss), end='')
-    #
-    #                     if _step % args.log_every == 0:
-    #                         summary = sess.run(merged)
-    #                         writer.add_summary(summary, global_step=_step)
-    #
-    #                     if _step % args.save_every == 0:
-    #                         print('\n{0}\nSaving model...'.format('-' * 55))
-    #                         saver.save(sess=sess, save_path=args.save_path,
-    #                                    global_step=global_step)
-    #                         print('{0}\n'.format('-' * 55))
-    #
-    #                 except tf.errors.OutOfRangeError:
-    #                     break
-    #         except KeyboardInterrupt:
-    #             print('\n{0}\nTraining interrupted by user!'.format('-' * 55))
-    #             print('Saving model to {}'.format(args.save_path))
-    #
-    #             saver.save(sess=sess, save_path=args.save_path,
-    #                        global_step=global_step)
-    #
-    #             print('{0}\n'.format('-' * 55))
-    #
-    #             # !- End training.
-    #             break
+    predictions = model(data[DataKeys.IMAGES])
+
+    loss = loss_fn(predictions, data[DataKeys.LABELS])
+
+    tf.summary.scalar('loss', loss)
+
+    # Minimize loss (train the model).
+    optimizer = tf.train.RMSPropOptimizer(learning_rate=args.learning_rate)
+    global_step = tf.train.get_or_create_global_step()
+    train_op = optimizer.minimize(loss=loss, global_step=global_step,
+                                  name='train_op')
+    merged = tf.summary.merge_all()
+
+    with tf.Session() as sess:
+        # Initialize global variables.
+        init = tf.global_variables_initializer()
+        sess.run(init)
+
+        # DEBUGGING:
+        filenames, targets = load_data(CSV_FILENAME)
+        feed_dict = {img_plhd: filenames}
+        sess.run(iterator.initializer, feed_dict=feed_dict)
+
+        # _p, _lo = sess.run([predictions, loss])
+        _p = sess.run(predictions)
+        print('Predictions', _p)
+        # print('Loss', _lo)
+
+        # save_dir = os.path.dirname(args.save_path)
+        #
+        # saver = tf.train.Saver()
+        # writer = tf.summary.FileWriter(logdir=args.log_dir, graph=sess.graph)
+
+        # if tf.gfile.Exists(save_dir):
+        #     try:
+        #         ckpt_path = tf.train.latest_checkpoint(save_dir)
+        #         saver.restore(sess=sess, save_path=ckpt_path)
+        #         logging.info('Restored checkpoint from {}'.format(ckpt_path))
+        #     except Exception:
+        #         logging.warning('Could not load checkpoint. Initializing global variables.')
+        #         sess.run(init)
+        # else:
+        #     # Create checkpoint directory.
+        #     tf.gfile.MakeDirs(save_dir)
+        #
+        #     # Initialize global variables.
+        #     logging.info('No checkpoint. Initializing global variables.')
+        #     sess.run(init)
+        #
+        # # Real training data.
+        # filenames, targets = load_data(CSV_FILENAME)
+        # feed_dict = {img_plhd: filenames, label_plhd: targets}
+        #
+        # for epoch in range(args.epochs):
+        #     try:
+        #         # Run dataset initializer.
+        #         sess.run(iterator.initializer, feed_dict=feed_dict)
+        #
+        #         while True:
+        #             try:
+        #                 # Run train operation.
+        #                 _, _step, _loss = sess.run([train_op, global_step, loss])
+        #
+        #                 print('\rEpoch: {:,} Step: {:,} Loss: {:.2f}'
+        #                       .format(epoch, _step, _loss), end='')
+        #
+        #                 if _step % args.log_every == 0:
+        #                     summary = sess.run(merged)
+        #                     writer.add_summary(summary, global_step=_step)
+        #
+        #                 if _step % args.save_every == 0:
+        #                     print('\n{0}\nSaving model...'.format('-' * 55))
+        #                     saver.save(sess=sess, save_path=args.save_path,
+        #                                global_step=global_step)
+        #                     print('{0}\n'.format('-' * 55))
+        #
+        #             except tf.errors.OutOfRangeError:
+        #                 break
+        #     except KeyboardInterrupt:
+        #         print('\n{0}\nTraining interrupted by user!'.format('-' * 55))
+        #         print('Saving model to {}'.format(args.save_path))
+        #
+        #         saver.save(sess=sess, save_path=args.save_path,
+        #                    global_step=global_step)
+        #
+        #         print('{0}\n'.format('-' * 55))
+        #
+        #         # !- End training.
+        #         break
 
 
 if __name__ == '__main__':
@@ -283,6 +262,6 @@ if __name__ == '__main__':
     print('{}\n'.format('-' * 55))
 
     # Update data directory.
-    data.data_dir = args.data_dir
+    data_dir = args.data_dir
 
     train(args=args)
