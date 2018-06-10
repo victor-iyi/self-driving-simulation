@@ -118,18 +118,19 @@ def _str2list(string: str):
 if __name__ == '__main__':
     # Command line arguments.
     parser = argparse.ArgumentParser(
+        description='Freezing TensorFlow models into a single protobuf file.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
     # File & directory arguments.
     parser.add_argument('-d', dest='ckpt_dir', type=str, default='saved/models/',
                         help='Directory containing checkpoint files.')
-    parser.add_argument('-f', dest='frozen_file', type=str, default='saved/frozen/model.pb',
+    parser.add_argument('-f', dest='frozen_file', type=str, default='saved/frozen/nvidia.pb',
                         help='Path to a protobuf file (.pb), where frozen model is saved.')
 
     # Graph control arguments.
     parser.add_argument('-o', dest='output_nodes', type=_str2list,
-                        default='model/model/layers/prediction/dense/BiasAdd',
+                        default='model/layers/output/BiasAdd',
                         help='What are the names of useful output nodes for inference (or metrics). '
                              'NOTE: Output nodes must be separated by (",", ", ", ":" or ": ").')
     parser.add_argument('-c', dest='clear_devices', type=bool, default=True,

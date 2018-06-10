@@ -30,42 +30,31 @@ CSV_FILENAME = os.path.join(data_dir, 'driving_log.csv')
 IMG_DIR = os.path.join(data_dir, 'IMG')
 
 # CSV File header names.
-FILE_NAMES = ['img_center', 'img_left', 'img_right',
-              'center', 'left', 'right', 'steering_angle']
+FILE_NAMES = ['center_path', 'left_path', 'right_path',
+              'steering_angle', 'throttle', 'brake', 'speed']
 
 # Image dimensions.
 img_size, channels = 32, 3
 
 
-def _read_py_function(filename, label):
-    """Custom OpenCV function to read images, instead of `tf.read_file()` op.
-
-    Args:
-        filename (tf.string): Path to an image file.
-        label (np.ndarray): Associated labels.
-
-    Returns:
-        tuple: image_decoded, label
-    """
-    image_decoded = cv2.imread(filename.decode(), cv2.IMREAD_GRAYSCALE)
-    return image_decoded, label
-
-
 # Use standard TensorFlow operations to resize the image to a fixed shape.
-def _resize_function(image_decoded: tf.Tensor, label: tf.Tensor):
+def _img_func(image: tf.Tensor):
     """Use standard TensorFlow ops to resize image to a fixed shape.
 
     Args:
-        image_decoded (tf.Tensor): Decoded image.
-        label (tf.Tensor): Associated label.
+        image (tf.Tensor): Decoded image.
 
     Returns:
-        tuple: image_resized, label
+        tf.Tensor:
+            Cropped and/or padded image. If `images` was 4-D, a 4-D float
+                Tensor of shape `[batch, new_height, new_width, channels]`.
+                If `images` was 3-D, a 3-D float Tensor of shape
+                `[new_height, new_width, channels]`.
     """
-    image_decoded.set_shape([None, None, None])
-    image_resized = tf.image.resize_image_with_crop_or_pad(image_decoded,
-                                                           img_size, img_size)
-    return image_resized, label
+    image_resized = tf.image.resize_image_with_crop_or_pad(image=image,
+                                                           target_height=img_size,
+                                                           target_width=img_size)
+    return image_resized
 
 
 def _parser(filename: tf.string, label: tf.Tensor):
@@ -85,8 +74,9 @@ def _parser(filename: tf.string, label: tf.Tensor):
     image_decoded = tf.image.decode_image(image_string)
 
     # Crop and/or pads an image to a target width and height.
-    image_resized = tf.image.resize_image_with_crop_or_pad(image_decoded,
-                                                           img_size, img_size)
+    image_resized = tf.image.resize_image_with_crop_or_pad(image=image_decoded,
+                                                           target_height=img_size,
+                                                           target_width=img_size)
 
     # Cast tf.uint8 into tf.float32
     image_cast = tf.cast(image_resized, tf.float32)
@@ -101,14 +91,14 @@ def make_dataset(features: np.ndarray, labels: np.ndarray = None, **kwargs):
     """Returns a dataset object from tensor slices.
 
     Args:
-        features (np.ndarray): Features (filenames).
+        features (np.ndarray): Features (filenames) or a image for prediction.
         labels (np.ndarray): List of associated labels to features.
 
     Keyword Args:
         shuffle (bool): Maybe shuffle dataset.
             (default {True})
         buffer_size (int): Amount of data to shuffle randomly at a time.
-            (default {1000}
+            (default {1000})
         batch_size (int): Mini-batch size.
             (default {128})
 
@@ -125,11 +115,8 @@ def make_dataset(features: np.ndarray, labels: np.ndarray = None, **kwargs):
         dataset = tf.data.Dataset.from_tensor_slices((features, labels))
         dataset = dataset.map(_parser)
     else:
+        features = tf.py_func(_img_func, [features], tf.float32)
         dataset = tf.data.Dataset.from_tensor_slices(features)
-        dataset = dataset.map(lambda fname, label: tuple(tf.py_func(_read_py_function,
-                                                                    [fname, label],
-                                                                    [tf.uint8, label.dtype])))
-        dataset = dataset.map(_resize_function)
 
     # Apply transformation steps...
     dataset = dataset.batch(batch_size=batch_size)
@@ -139,31 +126,37 @@ def make_dataset(features: np.ndarray, labels: np.ndarray = None, **kwargs):
     return dataset
 
 
-def load_data(features: np.ndarray = None, **kwargs):
-    """Helper function to load dataset into a tf.data.Dataset object.
+def load_data(filename: str, **kwargs):
+    """Helper method for loading image filenames & labels from CSV file.
 
     Args:
-        features (np.ndarray): Images to create dataset slice from.
+        filename (str): Path to a CSV file. Containing image paths.
 
     Keyword Args:
-        See ``make_dataset``
+        header (list): List of CSV headers.
+        feature_cols (list or str): (optional) Names of feature columns.
+        label_col (str): Name of label column.
+
+    Raises:
+        FileNotFoundError: `filename` was not found!
 
     Returns:
-
+        tuple: (image filenames, labels)
+            Filenames and Labels are both NumPy arrays.
     """
-    # test_size = kwargs.get('test_size') or 0.1
+    # Extract keyword arguments.
+    header = kwargs.get('header') or FILE_NAMES
+    feature_cols = kwargs.get('feature_cols') or FILE_NAMES[0]
+    label_col = kwargs.get('label_col') or FILE_NAMES[-1]
 
-    if features is None:
-        # Read dataset from cvs file if there are no features.
-        df = pd.read_csv(CSV_FILENAME, names=FILE_NAMES)
+    if not os.path.isfile(filename):
+        raise FileNotFoundError('{} was not found!'.format(filename))
 
-        # Extract features & labels.
-        features = df[FILE_NAMES[0]].astype(str).values
-        labels = df[FILE_NAMES[-1]].astype(np.float32).values
+    # Read dataset from cvs file if there are no features.
+    df = pd.read_csv(filename, names=header)
 
-        # Create a dataset object.
-        dataset = make_dataset(features, labels=labels, **kwargs)
-    else:
-        dataset = make_dataset(features, labels=None, **kwargs)
+    # Extract features & labels.
+    img_filenames = df[feature_cols].astype(str).values
+    labels = df[label_col].astype(np.float32).values
 
-    return dataset
+    return img_filenames, labels

@@ -19,7 +19,7 @@ import argparse
 import tensorflow as tf
 
 
-def load(frozen_file, **kwargs):
+def load(frozen_file: str, **kwargs):
     """Returns a graph loaded from a protobuf file (.pb).
 
     Args:
@@ -76,7 +76,11 @@ def load(frozen_file, **kwargs):
 
     # Load graph_def into default graph
     with tf.Graph().as_default() as graph:
-        tf.import_graph_def(graph_def=graph_def, **kwargs)
+        # Prefix to node names.
+        prefix = frozen_file.split('/')[-1].split('.')[0]
+
+        # Import graph def to default graph.
+        tf.import_graph_def(graph_def=graph_def, name=prefix, **kwargs)
 
     return graph
 
@@ -84,11 +88,12 @@ def load(frozen_file, **kwargs):
 if __name__ == '__main__':
     # Command line argument parser.
     parser = argparse.ArgumentParser(
+        description='Load frozen TensorFlow model (protobuf binary) into a TensorFlow graph.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
     # File & directory arguments.
-    parser.add_argument('-f', dest='frozen_file', type=str, default='../saved/frozen/model.pb',
+    parser.add_argument('-f', dest='frozen_file', type=str, default='../saved/frozen/nvidia.pb',
                         help='Path to a protobuf file (.pb), where frozen model is saved.')
 
     # Parse known arguments.
