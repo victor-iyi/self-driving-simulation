@@ -265,7 +265,7 @@ if __name__ == '__main__':
                         help='Optimizer\'s learning rate.')
 
     # Training arguments.
-    parser.add_argument('--log_every', dest='log_every', type=int, default=50,
+    parser.add_argument('--log_every', dest='log_every', type=int, default=20,
                         help='Interval to log summaries to Tensorboard.')
     parser.add_argument('--save_every', dest='save_every', type=int, default=200,
                         help='Intervals to save model checkpoints.')

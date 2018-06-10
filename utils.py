@@ -29,10 +29,10 @@ class Keys:
 
 class Collection:
     # Convenience placeholder collections.
-    PLACEHOLDERS = "placeholders"
+    PLACEHOLDERS = "collection_placeholders"
 
     # Model collections.
-    MODEL = "model"
+    MODEL = "collection_model"
 
     # Store model prediction in this collection for easy retrieval.
-    PREDICTION = "predictions"
+    PREDICTION = "collection_predictions"
