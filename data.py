@@ -130,9 +130,6 @@ def make_dataset(features: np.ndarray, labels: np.ndarray = None, **kwargs):
     # Change map function depending on parameters.
     map_fn = _parser if labels is not None else _img_func
 
-    # Since prediction doesn't have labels, we create arbitrary label.
-    labels = labels if labels is not None else tf.zeros(shape=(len(features),))
-
     # Read CSV file into dataset object.
     tensors = {DataKeys.IMAGES: features, DataKeys.LABELS: labels}
     dataset = tf.data.Dataset.from_tensor_slices(tensors)

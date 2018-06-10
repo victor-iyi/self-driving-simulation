@@ -115,13 +115,19 @@ def loss_fn(predictions, labels):
 def train(args):
     with tf.name_scope('placeholders'):
         img_plhd = tf.placeholder(tf.string, shape=(None,), name="image")
-        label_plhd = tf.placeholder(tf.float32, shape=(None,), name="labels")
 
-    # filenames, labels = load_data(CSV_FILENAME)
+        default_label = np.zeros(shape=(1,), dtype=np.float32)
 
-    dataset = make_dataset(img_plhd, label_plhd)
+        # For predictions: when no labels, create arbitrary label.
+        label_plhd = tf.placeholder_with_default(input=default_label,
+                                                 shape=(None,), name="labels")
 
-    iterator = dataset.make_initializable_iterator()
+    train_dataset = make_dataset(img_plhd, label_plhd)
+    pred_dataset = make_dataset(img_plhd, label_plhd, batch_size=1)
+
+    iterator = tf.data.Iterator.from_structure(output_types=pred_dataset.output_types,  # !-
+                                               output_shapes=train_dataset.output_shapes)
+
     data = iterator.get_next()
     print(data)
 
@@ -147,8 +153,12 @@ def train(args):
 
         # DEBUGGING:
         filenames, targets = load_data(CSV_FILENAME)
+        print(filenames)
         feed_dict = {img_plhd: filenames}
-        sess.run(iterator.initializer, feed_dict=feed_dict)
+
+        train_init = iterator.make_initializer(train_dataset,
+                                               name="train_dataset")
+        sess.run(train_init, feed_dict=feed_dict)
 
         # _p, _lo = sess.run([predictions, loss])
         _p = sess.run(predictions)
