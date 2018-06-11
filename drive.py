@@ -53,7 +53,8 @@ class Drive:
         self._speed_limit = (self._min_speed if throttle > self._speed_limit
                              else self._max_speed)
         # (1 - A^2) - (s/L)^2
-        throttle = 1.0 - steering_angle ** 2 - (throttle / self._speed_limit) ** 2
+        throttle = 1.0 - steering_angle ** 2 - \
+            (throttle / self._speed_limit) ** 2
 
         sio.emit(
             event="steer",
@@ -91,8 +92,10 @@ class Drive:
         # img_tensor = get_next.values()[0]
         # print(self.sess.run(img_tensor))
 
-        for op in self.graph.get_all_collection_keys():
-            print('{}\n'.format(op))
+        img_plhd = self.graph.get_tensor_by_name('nvidia/placeholders/image:0')
+        print(img_plhd)
+        # for op in self.graph.get_operations():
+        #     print(op.name)
 
 
 @sio.on("connect")

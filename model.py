@@ -192,7 +192,8 @@ def train(args):
                 saver.restore(sess=sess, save_path=ckpt_path)
                 logging.info('Restored checkpoint from {}'.format(ckpt_path))
             except Exception:
-                logging.warning('Could not load checkpoint. Initializing global variables.')
+                logging.warning('Could not load checkpoint. '
+                                'Initializing global variables.')
                 sess.run(init)
         else:
             # Create checkpoint directory.
@@ -214,7 +215,8 @@ def train(args):
                 while True:
                     try:
                         # Run train operation.
-                        _, _step, _loss = sess.run([train_op, global_step, loss])
+                        _, _step, _loss = sess.run([train_op,
+                                                    global_step, loss])
 
                         print('\rEpoch: {:,} Step: {:,} Loss: {:,.2f}'
                               .format(epoch, _step, _loss), end='')

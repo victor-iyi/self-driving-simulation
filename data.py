@@ -139,10 +139,6 @@ def make_dataset(features: np.ndarray, labels: np.ndarray = None, **kwargs):
     return dataset
 
 
-def _transform(row):
-    print(row)
-
-
 def create_tiny_dataset(image_string):
     dataset = tf.data.Dataset.from_tensor_slices(image_string)
     dataset.apply(dataset)
