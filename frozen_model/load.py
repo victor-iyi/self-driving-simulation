@@ -1,15 +1,15 @@
 """Load a frozen model.
 
-   @author 
+   @author
      Victor I. Afolabi
      Artificial Intelligence & Software Engineer.
      Email: javafolabi@gmail.com
      GitHub: https://github.com/victor-iyiola
-  
+
    @project
      File: load.py
      Created on 09 June, 2018 @ 4:38 PM.
-  
+
    @license
      MIT License
      Copyright (c) 2018. Victor I. Afolabi. All rights reserved.
@@ -20,7 +20,7 @@ import tensorflow as tf
 
 
 def load(frozen_file: str, **kwargs):
-    """Returns a graph loaded from a protobuf file (.pb).
+  """Returns a graph loaded from a protobuf file (.pb).
 
     Args:
         frozen_file (str): Path to a protobuf file (.pb) otherwise it appends it.
@@ -67,46 +67,51 @@ def load(frozen_file: str, **kwargs):
     Returns:
         tf.Graph: TF graph loaded from `frozen_file`.
     """
-    if not tf.gfile.Exists(frozen_file):
-        raise FileNotFoundError('{} was not found.'.format(frozen_file))
+  if not tf.gfile.Exists(frozen_file):
+    raise FileNotFoundError('{} was not found.'.format(frozen_file))
 
-    # Prefix to node names.
-    prefix = kwargs.get('prefix') or frozen_file.split('/')[-1].split('.')[0]
+  # Prefix to node names.
+  prefix = kwargs.get('prefix') or frozen_file.split('/')[-1].split('.')[0]
 
-    # Read the protobuf graph
-    with tf.gfile.GFile(frozen_file, mode='rb') as f:
-        graph_def = tf.GraphDef()
-        graph_def.ParseFromString(f.read())
+  # Read the protobuf graph
+  with tf.gfile.GFile(frozen_file, mode='rb') as f:
+    graph_def = tf.GraphDef()
+    graph_def.ParseFromString(f.read())
 
-    # Load graph_def into default graph
-    with tf.Graph().as_default() as graph:
-        # Import graph def to default graph.
-        tf.import_graph_def(graph_def=graph_def, name=prefix, **kwargs)
+  # Load graph_def into default graph
+  with tf.Graph().as_default() as graph:
+    # Import graph def to default graph.
+    tf.import_graph_def(
+        graph_def=graph_def, return_elements=[], name=prefix, **kwargs)
 
-    return graph
+  return graph
 
 
 if __name__ == '__main__':
-    # Command line argument parser.
-    parser = argparse.ArgumentParser(
-        description='Load frozen TensorFlow model (protobuf binary) into a TensorFlow graph.',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
+  # Command line argument parser.
+  parser = argparse.ArgumentParser(
+      description='Load frozen TensorFlow model '
+      '(protobuf binary) into a TensorFlow graph.',
+      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    # File & directory arguments.
-    parser.add_argument('-f', dest='frozen_file', type=str, default='../saved/frozen/nvidia.pb',
-                        help='Path to a protobuf file (.pb), where frozen model is saved.')
+  # File & directory arguments.
+  parser.add_argument(
+      '-f',
+      dest='frozen_file',
+      type=str,
+      default='../saved/frozen/nvidia.pb',
+      help='Path to a protobuf file (.pb), where frozen model is saved.')
 
-    # Parse known arguments.
-    args = parser.parse_args()
+  # Parse known arguments.
+  args = parser.parse_args()
 
-    print('{0}\n{1:^55}\n{0}'.format('-' * 55, 'Command Line Arguments'))
-    for k, v in vars(args).items():
-        print('{:<20} = {:>30}'.format(k, v))
-    print('{}\n'.format('-' * 55))
+  print('{0}\n{1:^55}\n{0}'.format('-' * 55, 'Command Line Arguments'))
+  for k, v in vars(args).items():
+    print('{:<20} = {:>30}'.format(k, v))
+  print('{}\n'.format('-' * 55))
 
-    # Usage:
-    graph = load(frozen_file=args.frozen_file)
+  # Usage:
+  graph = load(frozen_file=args.frozen_file)
 
-    ops = len(graph.get_operations())
-    print('{:,} ops in graph.'.format(ops))
+  ops = len(graph.get_operations())
+  print('{:,} ops in graph.'.format(ops))
