@@ -38,7 +38,9 @@ def freeze_v2(ckpt_dir: str, output_nodes: str, **kwargs):
   initializer_nodes = kwargs.get('initializer_nodes') or ''
 
   # For optimized model
-  input_nodes = kwargs.get('input_nodes') or ''
+  optimized_inputs = kwargs.get('optimized_inputs') or ['']
+  optimized_outputs = kwargs.get('optimized_outputs') or ['']
+  optimized_placeholders = kwargs.get('optimized_placeholders') or ['']
 
   # Checkpoint path.
   input_checkpoint = tf.train.latest_checkpoint(ckpt_dir)
@@ -74,9 +76,9 @@ def freeze_v2(ckpt_dir: str, output_nodes: str, **kwargs):
 
   output_graph_def = optimize_for_inference_lib. \
     optimize_for_inference(input_graph,
-                           input_node_names=[''],
-                           output_node_names=[''],
-                           placeholder_type_enum=[])
+                           input_node_names=optimized_inputs,
+                           output_node_names=optimized_outputs,
+                           placeholder_type_enum=optimized_placeholders)
 
   # Save serialized data (as protobuf string).
   tf.train.write_graph(output_graph_def, logdir=ckpt_dir,
