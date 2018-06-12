@@ -17,19 +17,19 @@
 
 
 class Keys:
-  """For consistent naming of strings."""
+    """For consistent naming of strings."""
 
-  # Data keys.
-  LABELS = "labels"
-  IMAGES = "images"
+    # Data keys.
+    LABELS = "labels"
+    IMAGES = "images"
 
-  # Initializer keys.
-  DATA_INIT = "data_initializer"
+    # Initializer keys.
+    DATA_INIT = "data_initializer"
 
 
 class Collection:
-  # Convenience placeholder collections.
-  PLACEHOLDERS = "collection_placeholders"
+    # Convenience placeholder collections.
+    PLACEHOLDERS = "collection_placeholders"
 
-  # Store model prediction in this collection for easy retrieval.
-  PREDICTION = "collection_predictions"
+    # Store model prediction in this collection for easy retrieval.
+    PREDICTION = "collection_predictions"
