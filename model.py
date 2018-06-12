@@ -191,9 +191,9 @@ def train(args):
     graph_path_bin = 'graph.pb'  # binary file format.
 
     # Save the graph definition here...
-    tf.train.write_graph(sess.graph_def, logdir=save_dir,
+    tf.train.write_graph(sess.graph_def, logdir=args.graph_dir,
                          name=graph_path_txt, as_text=True)
-    tf.train.write_graph(sess.graph_def, logdir=save_dir,
+    tf.train.write_graph(sess.graph_def, logdir=args.graph_dir,
                          name=graph_path_bin, as_text=False)
 
     if tf.gfile.Exists(save_dir):
@@ -286,6 +286,8 @@ if __name__ == '__main__':
                       help='Path to write Tensorboard event logs.')
   parser.add_argument('-d', dest='data_dir', type=str, default='./simulations/',
                       help='Directory where simulated data is stored.')
+  parser.add_argument('-g', dest='graph_dir', type=str, default='saved/graphs/',
+                      help='Directory where graph definitions are saved (graph.pb & graph.pbtxt)')
   parser.add_argument('-s', dest='save_path', type=str, default='saved/models/nvidia.ckpt',
                       help='Checkpoint saved path.')
 
