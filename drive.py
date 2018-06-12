@@ -24,7 +24,6 @@ from flask import Flask
 
 # Helper file to load frozen model.
 from frozen_model import load
-from data import create_tiny_dataset
 
 # Global objects.
 sio, driver = socketio.Server(), None

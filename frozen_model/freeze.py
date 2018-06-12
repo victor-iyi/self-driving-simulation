@@ -19,9 +19,7 @@ import os.path
 
 import tensorflow as tf
 from tensorflow.python.framework.graph_util import convert_variables_to_constants
-
-
-# from tensorflow.python.tools import freeze_graph
+from tensorflow.python.tools import optimize_for_inference_lib
 
 
 def freeze_v2(ckpt_dir: str, output_nodes: list, **kwargs):
@@ -31,18 +29,16 @@ def freeze_v2(ckpt_dir: str, output_nodes: list, **kwargs):
 
   # Check `output_nodes` isn't empty.
   if not all(output_nodes):
-    raise ValueError(
-      '{} must contain at least one valid node name.'.format(output_nodes)
-    )
+    raise ValueError('{} must contain at least one valid node name.'
+                     .format(output_nodes))
 
   # Allow TensorFlow to control on loading, where it wants operations to be calculated.
   # clear_devices = kwargs.get('clear_devices') or True
 
   # Destination frozen file name.
   frozen_file = kwargs.get('frozen_file') or 'saved/frozen/model.pb'
-  frozen_file = (
-    frozen_file if frozen_file.endswith('.pb') else '{}.pb'.format(frozen_file)
-  )
+  frozen_file = (frozen_file if frozen_file.endswith('.pb')
+                 else '{}.pb'.format(frozen_file))
 
   # If the frozen path is not a directory, create it.
   if not tf.gfile.IsDirectory(os.path.dirname(frozen_file)):
@@ -126,14 +122,25 @@ def freeze(ckpt_dir: str, output_nodes: list, **kwargs):
   with tf.Session() as sess:
     saver.restore(sess=sess, save_path=ckpt_path)
     try:
+      for op in graph.get_operations():
+        print(op.name)
       # Convert variables to constants.
-      output_graph_def = convert_variables_to_constants(sess=sess,
-                                                        input_graph_def=input_graph_def,
-                                                        output_node_names=output_nodes)
+      # output_graph_def = convert_variables_to_constants(sess=sess,
+      #                                                   input_graph_def=input_graph_def,
+      #                                                   output_node_names=output_nodes)
+      output_graph_def = optimize_for_inference_lib.optimize_for_inference(
+        input_graph_def=input_graph_def,
+        input_node_names=['placeholders/image', 'placeholders/labels'],
+        output_node_names=['model/layers/output/BiasAdd'],
+        placeholder_type_enum=tf.float32.as_datatype_enum
+      )
       print(output_graph_def)
-      # Write serialized string into frozen protobuf file.
-      with tf.gfile.GFile(frozen_file, mode='wb') as f:
-        f.write(output_graph_def.SerializeToString())
+      # Dave optimized graph.
+      tf.train.write_graph(output_graph_def, logdir=os.path.dirname(frozen_file),
+                           name=os.path.basename(frozen_file), as_text=False)
+      # # Write serialized string into frozen protobuf file.
+      # with tf.gfile.GFile(frozen_file, mode='wb') as f:
+      #   f.write(output_graph_def.SerializeToString())
       print('Frozen model saved to "{}".'.format(frozen_file))
       print('{:,} nodes (ops) in the final output graph.'
             .format(len(output_graph_def.node)))
