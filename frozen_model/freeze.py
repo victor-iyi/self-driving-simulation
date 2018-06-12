@@ -18,7 +18,8 @@ import argparse
 import os
 
 import tensorflow as tf
-# from tensorflow.python.framework.graph_util import convert_variables_to_constants
+from tensorflow.python.framework.graph_util import convert_variables_to_constants
+from tensorflow.python.framework.graph_util_impl import convert_variables_to_constants
 from tensorflow.python.tools import optimize_for_inference_lib, freeze_graph
 
 
@@ -27,6 +28,7 @@ def freeze_v2(ckpt_dir: str, output_nodes: str, **kwargs):
   if not tf.gfile.IsDirectory(ckpt_dir):
     raise NotADirectoryError('Directory does not exist! {}'.format(ckpt_dir))
 
+  # TODO: Finish up the `freeze_v2` function & test it!
   # If the frozen path is not a directory, create it.
   # Extract Keyword arguments.
   input_graph = kwargs.get('input_graph') or 'saved/graphs/graph.pb'
@@ -166,15 +168,15 @@ def freeze(ckpt_dir: str, output_nodes: list, **kwargs):
       for op in graph.get_operations():
         print(op.name)
       # Convert variables to constants.
-      # output_graph_def = convert_variables_to_constants(sess=sess,
-      #                                                   input_graph_def=input_graph_def,
-      #                                                   output_node_names=output_nodes)
-      output_graph_def = optimize_for_inference_lib.optimize_for_inference(
-        input_graph_def=input_graph_def,
-        input_node_names=['placeholders/image', 'placeholders/labels'],
-        output_node_names=['model/layers/output/BiasAdd'],
-        placeholder_type_enum=tf.float32.as_datatype_enum
-      )
+      output_graph_def = convert_variables_to_constants(sess=sess,
+                                                        input_graph_def=input_graph_def,
+                                                        output_node_names=output_nodes)
+      # output_graph_def = optimize_for_inference_lib.optimize_for_inference(
+      #   input_graph_def=input_graph_def,
+      #   input_node_names=['placeholders/image', 'placeholders/labels'],
+      #   output_node_names=['model/layers/output/BiasAdd'],
+      #   placeholder_type_enum=[tf.string.as_datatype_enum, tf.float32.as_datatype_enum]
+      # )
       # Dave optimized graph.
       tf.train.write_graph(output_graph_def, logdir=os.path.dirname(frozen_file),
                            name=os.path.basename(frozen_file), as_text=False)
@@ -194,10 +196,7 @@ def freeze(ckpt_dir: str, output_nodes: list, **kwargs):
 
 def _str2list(string: str):
   """Command line arg for parsing string to list"""
-  return (
-    string.split(', ') or string.split(',') or
-    string.split(': ') or string.split(':')
-  )
+  return string.replace(' ', '').split(',')
 
 
 if __name__ == '__main__':
@@ -215,7 +214,7 @@ if __name__ == '__main__':
 
   # Graph control arguments.
   parser.add_argument('-o', dest='output_nodes', type=_str2list,
-                      default='model/layers/output/BiasAdd',
+                      default='placeholders/image,placeholders/labels,model/layers/output/BiasAdd,data/initializer/train_data',
                       help='What are the names of useful output nodes for inference (or metrics).'
                            'NOTE: Output nodes must be separated by (",", ", ", ":" or ": ").')
   parser.add_argument('-c', dest='clear_devices', type=bool, default=True,

@@ -18,6 +18,7 @@ import os
 
 import numpy as np
 import pandas as pd
+import cv2
 
 import tensorflow as tf
 
@@ -32,12 +33,43 @@ IMG_DIR = os.path.join(data_dir, 'IMG')
 
 # CSV File header names.
 FILE_NAMES = [
-    'center_path', 'left_path', 'right_path', 'steering_angle', 'throttle',
-    'brake', 'speed'
+  'center_path', 'left_path', 'right_path',  # Input
+  'steering_angle', 'throttle', 'brake', 'speed'  # Controls.
 ]
 
 # Image dimensions.
 img_size, channels = 32, 3
+
+
+def crop(image):
+  """
+  Crop the image (removing the sky at the top and the car front at the bottom)
+  """
+  return image[60:-25, :, :]  # remove the sky and the car front
+
+
+def resize(image):
+  """
+  Resize the image to the input shape used by the network model
+  """
+  return cv2.resize(image, (img_size, img_size), cv2.INTER_AREA)
+
+
+def rgb2yuv(image):
+  """
+  Convert the image from RGB to YUV (This is what the NVIDIA model does)
+  """
+  return cv2.cvtColor(image, cv2.COLOR_RGB2YUV)
+
+
+def preprocess(image):
+  """
+  Combine all preprocess functions into one
+  """
+  image = crop(image)
+  image = resize(image)
+  image = rgb2yuv(image)
+  return image
 
 
 # Use standard TensorFlow operations to resize the image to a fixed shape.
@@ -45,20 +77,20 @@ def _img_func(row: dict):
   """Use standard TensorFlow ops to resize image to a fixed shape.
 
     Args:
-        row (dict): Containing base64 image.
+      row (dict): Containing base64 image.
 
     Returns:
-        dict: {Keys.IMAGES: tf.Tensor}
-            Cropped and/or padded image. If `images` was 4-D, a 4-D float
-                Tensor of shape `[batch, new_height, new_width, channels]`.
-                If `images` was 3-D, a 3-D float Tensor of shape
-                `[new_height, new_width, channels]`.
+      dict: {Keys.IMAGES: tf.Tensor}
+        Cropped and/or padded image. If `images` was 4-D, a 4-D float
+          Tensor of shape `[batch, new_height, new_width, channels]`.
+          If `images` was 3-D, a 3-D float Tensor of shape
+          `[new_height, new_width, channels]`.
     """
   image_string = tf.decode_base64(row[Keys.IMAGES])
   image_decoded = tf.image.decode_image(image_string)
-  image_resized = tf.image.resize_image_with_crop_or_pad(
-      image=image_decoded, target_height=img_size, target_width=img_size
-  )
+  image_resized = tf.image.resize_image_with_crop_or_pad(image=image_decoded,
+                                                         target_height=img_size,
+                                                         target_width=img_size)
   # Cast tf.uint8 into tf.float32
   image_cast = tf.cast(image_resized, tf.float32)
 
@@ -69,12 +101,11 @@ def _parser(row: dict):
   """Reads an image from a file, decodes it into dense Tensor.
 
     Args:
-        row (dict): Dictionary containing features & labels.
+      row (dict): Dictionary containing features & labels.
 
     Returns:
-        dict: {Keys.FILENAMES: tf.float32, Keys.LABEL: tf.float32}
-            decoded image & reshaped label.
-
+      dict: {Keys.FILENAMES: tf.float32, Keys.LABEL: tf.float32}
+        decoded image & reshaped label.
     """
   # Read the contents in filename as a string.
   image_string = tf.read_file(row[Keys.IMAGES])
@@ -83,9 +114,9 @@ def _parser(row: dict):
   image_decoded = tf.image.decode_image(image_string)
 
   # Crop and/or pads an image to a target width and height.
-  image_resized = tf.image.resize_image_with_crop_or_pad(
-      image=image_decoded, target_height=img_size, target_width=img_size
-  )
+  image_resized = tf.image.resize_image_with_crop_or_pad(image=image_decoded,
+                                                         target_height=img_size,
+                                                         target_width=img_size)
   # Cast tf.uint8 into tf.float32
   image_cast = tf.cast(image_resized, tf.float32)
 
@@ -100,19 +131,19 @@ def make_dataset(features: np.ndarray, labels: np.ndarray = None, **kwargs):
   """Returns a dataset object from tensor slices.
 
     Args:
-        features (np.ndarray): Features (filenames) or a image for prediction.
-        labels (np.ndarray): List of associated labels to features.
+      features (np.ndarray): Features (filenames) or a image for prediction.
+      labels (np.ndarray): List of associated labels to features.
 
     Keyword Args:
-        shuffle (bool): Maybe shuffle dataset.
-            (default {True})
-        buffer_size (int): Amount of data to shuffle randomly at a time.
-            (default {1000})
-        batch_size (int): Mini-batch size.
-            (default {128})
+      shuffle (bool): Maybe shuffle dataset.
+        (default {True})
+      buffer_size (int): Amount of data to shuffle randomly at a time.
+        (default {1000})
+      batch_size (int): Mini-batch size.
+        (default {128})
 
     Returns:
-        tf.data.Dataset: Dataset object.
+      tf.data.Dataset: Dataset object.
     """
   # Extract keyword arguments.
   shuffle = kwargs.get('shuffle', True)
@@ -121,6 +152,7 @@ def make_dataset(features: np.ndarray, labels: np.ndarray = None, **kwargs):
 
   # Change map function depending on parameters.
   map_fn = _parser if labels is not None else _img_func
+  labels = labels if labels is not None else tf.zeros(shape=(1,))
 
   # Read CSV file into dataset object.
   tensors = {Keys.IMAGES: features, Keys.LABELS: labels}
@@ -135,29 +167,23 @@ def make_dataset(features: np.ndarray, labels: np.ndarray = None, **kwargs):
   return dataset
 
 
-def create_tiny_dataset(image_string):
-  dataset = tf.data.Dataset.from_tensor_slices(image_string)
-  dataset.apply(dataset)
-  return dataset
-
-
 def load_data(filename: str, **kwargs):
   """Helper method for loading image filenames & labels from CSV file.
 
     Args:
-        filename (str): Path to a CSV file. Containing image paths.
+      filename (str): Path to a CSV file. Containing image paths.
 
     Keyword Args:
-        header (list): List of CSV headers.
-        feature_cols (list or str): (optional) Names of feature columns.
-        label_col (str): Name of label column.
+      header (list): List of CSV headers.
+      feature_cols (list or str): (optional) Names of feature columns.
+      label_col (str): Name of label column.
 
     Raises:
-        FileNotFoundError: `filename` was not found!
+      FileNotFoundError: `filename` was not found!
 
     Returns:
-        tuple: (image filenames, labels)
-            Filenames and Labels are both NumPy arrays.
+      tuple: (image filenames, labels)
+          Filenames and Labels are both NumPy arrays.
     """
   # Extract keyword arguments.
   header = kwargs.get('header') or FILE_NAMES
