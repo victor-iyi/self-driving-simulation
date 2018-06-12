@@ -258,87 +258,36 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser()
 
   # Data dimension.
-  parser.add_argument(
-    '-c',
-    dest='img_depth',
-    type=int,
-    default=3,
-    help='Image channels. One of (None, 0, 1, 2, 3 or 4)')
-  parser.add_argument(
-    '--img_size',
-    dest='img_size',
-    type=int,
-    default=32,
-    help='Size of input image to the network.')
+  parser.add_argument('-c', dest='img_depth', type=int, default=3,
+                      help='Image channels. One of (None, 0, 1, 2, 3 or 4)')
+  parser.add_argument('--img_size', dest='img_size', type=int, default=32,
+                      help='Size of input image to the network.')
 
-  parser.add_argument(
-    '-b',
-    '--batch_size',
-    dest='batch_size',
-    type=int,
-    default=64,
-    help='Mini-batch size.')
-  parser.add_argument(
-    '-buf',
-    '--buffer_size',
-    dest='buffer_size',
-    type=int,
-    default=500,
-    help='Size of data buffer to randomly shuffle at a time.')
+  parser.add_argument('-b', '--batch_size', dest='batch_size', type=int,
+                      default=64, help='Mini-batch size.')
+  parser.add_argument('-buf', '--buffer_size', dest='buffer_size', type=int, default=500,
+                      help='Size of data buffer to randomly shuffle at a time.')
 
-  parser.add_argument(
-    '-dr',
-    dest='dropout',
-    type=float,
-    default=0.5,
-    help='Dropout rate. Probability of randomly turning off neurons.')
-  parser.add_argument(
-    '-lr',
-    dest='learning_rate',
-    type=float,
-    default=1e-2,
-    help='Optimizer\'s learning rate.')
+  parser.add_argument('-dr', dest='dropout', type=float, default=0.5,
+                      help='Dropout rate. Probability of randomly turning off neurons.')
+  parser.add_argument('-lr', dest='learning_rate', type=float, default=1e-2,
+                      help='Optimizer\'s learning rate.')
 
   # Training arguments.
-  parser.add_argument(
-    '--log_every',
-    dest='log_every',
-    type=int,
-    default=20,
-    help='Interval to log summaries to Tensorboard.')
-  parser.add_argument(
-    '--save_every',
-    dest='save_every',
-    type=int,
-    default=200,
-    help='Intervals to save model checkpoints.')
-  parser.add_argument(
-    '-e',
-    dest='epochs',
-    type=int,
-    default=1000,
-    help='Number of training epochs.')
+  parser.add_argument('--log_every', dest='log_every', type=int, default=20,
+                      help='Interval to log summaries to Tensorboard.')
+  parser.add_argument('--save_every', dest='save_every', type=int, default=200,
+                      help='Intervals to save model checkpoints.')
+  parser.add_argument('-e', dest='epochs', type=int, default=1000,
+                      help='Number of training epochs.')
 
   # Data & checkpoint arguments.
-  parser.add_argument(
-    '-log',
-    '--logdir',
-    dest='log_dir',
-    type=str,
-    default='saved/logs/',
-    help='Path to write Tensorboard event logs.')
-  parser.add_argument(
-    '-d',
-    dest='data_dir',
-    type=str,
-    default='./simulations/',
-    help='Directory where simulated data is stored.')
-  parser.add_argument(
-    '-s',
-    dest='save_path',
-    type=str,
-    default='saved/models/nvidia.ckpt',
-    help='Checkpoint saved path.')
+  parser.add_argument('-log', '--logdir', dest='log_dir', type=str, default='saved/logs/',
+                      help='Path to write Tensorboard event logs.')
+  parser.add_argument('-d', dest='data_dir', type=str, default='./simulations/',
+                      help='Directory where simulated data is stored.')
+  parser.add_argument('-s', dest='save_path', type=str, default='saved/models/nvidia.ckpt',
+                      help='Checkpoint saved path.')
 
   # Parsed arguments.
   args = parser.parse_args()
