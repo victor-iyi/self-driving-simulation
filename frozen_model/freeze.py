@@ -18,31 +18,69 @@ import argparse
 import os
 
 import tensorflow as tf
-from tensorflow.python.framework.graph_util import convert_variables_to_constants
+# from tensorflow.python.framework.graph_util import convert_variables_to_constants
 from tensorflow.python.tools import optimize_for_inference_lib, freeze_graph
 
 
-def freeze_v2(ckpt_dir: str, output_nodes: list, **kwargs):
+def freeze_v2(ckpt_dir: str, output_nodes: str, **kwargs):
   # Make sure `ckpt_dir` is a directory & exists.
   if not tf.gfile.IsDirectory(ckpt_dir):
     raise NotADirectoryError('Directory does not exist! {}'.format(ckpt_dir))
 
-  # Check `output_nodes` isn't empty.
-  if not all(output_nodes):
-    raise ValueError('{} must contain at least one valid node name.'
-                     .format(output_nodes))
+  # If the frozen path is not a directory, create it.
+  # Extract Keyword arguments.
+  input_graph = kwargs.get('input_graph') or 'saved/graphs/graph.pb'
+  input_saver = kwargs.get('input_saver') or ''
+  input_binary = kwargs.get('input_binary', True)
+  restore_op_name = kwargs.get('restore_op_name') or 'save/restore_all'
+  filename_tensor_name = kwargs.get('filename_tensor_name') or 'save/Const:0'
+  clear_devices = kwargs.get('clear_devices', True)
+  initializer_nodes = kwargs.get('initializer_nodes') or ''
 
-  # Allow TensorFlow to control on loading, where it wants operations to be calculated.
-  # clear_devices = kwargs.get('clear_devices') or True
+  # For optimized model
+  input_nodes = kwargs.get('input_nodes') or ''
+
+  # Checkpoint path.
+  input_checkpoint = tf.train.latest_checkpoint(ckpt_dir)
 
   # Destination frozen file name.
   frozen_file = kwargs.get('frozen_file') or 'saved/frozen/model.pb'
   frozen_file = (frozen_file if frozen_file.endswith('.pb')
                  else '{}.pb'.format(frozen_file))
 
-  # If the frozen path is not a directory, create it.
-  if not tf.gfile.IsDirectory(os.path.dirname(frozen_file)):
-    tf.gfile.MakeDirs(os.path.dirname(frozen_file))
+  frozen_dir = os.path.dirname(frozen_file)
+
+  # Optimized frozen file (for inference).
+  optimized_file = kwargs.get('optimized_file') or os.path.join(frozen_dir, 'optimized_model.pb')
+  optimized_file = (optimized_file if optimized_file.endswith('.pb')
+                    else '{}.pb'.format(optimized_file))
+
+  # Freeze graph!
+  freeze_graph.freeze_graph(input_graph=input_graph,
+                            input_saver=input_saver,
+                            input_binary=input_binary,
+                            input_checkpoint=input_checkpoint,
+                            output_node_names=output_nodes,
+                            restore_op_name=restore_op_name,
+                            filename_tensor_name=filename_tensor_name,
+                            output_graph=frozen_file,
+                            clear_devices=clear_devices,
+                            initializer_nodes=initializer_nodes)
+
+  # Optimize graph for inference.
+  input_graph_def = tf.GraphDef()
+  with tf.gfile.Open(frozen_file, mode='r') as f:
+    input_graph_def.ParseFromString(f.read())
+
+  output_graph_def = optimize_for_inference_lib. \
+    optimize_for_inference(input_graph,
+                           input_node_names=[''],
+                           output_node_names=[''],
+                           placeholder_type_enum=[])
+
+  # Save serialized data (as protobuf string).
+  tf.train.write_graph(output_graph_def, logdir=ckpt_dir,
+                       name=optimized_file, as_text=False)
 
 
 def freeze(ckpt_dir: str, output_nodes: list, **kwargs):
@@ -109,29 +147,12 @@ def freeze(ckpt_dir: str, output_nodes: list, **kwargs):
   # Get the latest checkpoint.
   ckpt_path = os.path.abspath(tf.train.latest_checkpoint(ckpt_dir))
 
-  model_name = os.path.basename(frozen_file)
-  model_name = model_name.split('.')[0]
-
-  input_graph_path = '{}.pbtxt'.format(model_name)
-  input_saver_def_path = ""
-  input_binary = False
-  output_node_names = "O"
-  restore_op_name = "save/restore_all"
-  filename_tensor_name = "save/Const:0"
-  output_frozen_graph_name = '{}.pb'.format(model_name)
-  output_optimized_graph_name = 'optimized_{}.pb'.format(model_name)
-  clear_devices = True
-
-  freeze_graph.freeze_graph(input_graph_path, input_saver_def_path,
-                            input_binary, ckpt_path, output_node_names,
-                            restore_op_name, filename_tensor_name,
-                            output_frozen_graph_name, clear_devices, "")
-
   # File holding graph metadata.
   meta_file = '{}.meta'.format(ckpt_path)
 
   # Import meta graph & retrieve Saver object.
-  saver = tf.train.import_meta_graph(meta_file, clear_devices=clear_devices)
+  saver = tf.train.import_meta_graph(meta_file,
+                                     clear_devices=clear_devices)
 
   # Retrieve protobuf graph definition.
   graph = tf.get_default_graph()
