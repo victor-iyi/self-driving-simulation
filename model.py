@@ -37,16 +37,16 @@ class Model(tf.keras.Model):
     self.args = args
 
     # Convolutional Layers / Feature Extraction
-    self.conv1 = tf.keras.layers.Conv2D(
-      filters=24, kernel_size=5, padding='same', activation='elu')
-    self.conv2 = tf.keras.layers.Conv2D(
-      filters=36, kernel_size=5, padding='same', activation='elu')
-    self.conv3 = tf.keras.layers.Conv2D(
-      filters=48, kernel_size=5, padding='same', activation='elu')
-    self.conv4 = tf.keras.layers.Conv2D(
-      filters=64, kernel_size=3, padding='same', activation='elu')
-    self.conv5 = tf.keras.layers.Conv2D(
-      filters=64, kernel_size=3, padding='same', activation='elu')
+    self.conv1 = tf.keras.layers.Conv2D(filters=24, kernel_size=5,
+                                        padding='same', activation='elu')
+    self.conv2 = tf.keras.layers.Conv2D(filters=36, kernel_size=5,
+                                        padding='same', activation='elu')
+    self.conv3 = tf.keras.layers.Conv2D(filters=48, kernel_size=5,
+                                        padding='same', activation='elu')
+    self.conv4 = tf.keras.layers.Conv2D(filters=64, kernel_size=3,
+                                        padding='same', activation='elu')
+    self.conv5 = tf.keras.layers.Conv2D(filters=64, kernel_size=3,
+                                        padding='same', activation='elu')
 
     # Flatten & apply dropout.
     self.flatten = tf.keras.layers.Flatten()
@@ -68,11 +68,9 @@ class Model(tf.keras.Model):
     with tf.name_scope('layers'):
       # Input layer.
       with tf.name_scope('input'):
-        net = tf.reshape(
-          inputs,
-          shape=(-1, self.args.img_size, self.args.img_size,
-                 self.args.img_depth),
-          name='reshape')
+        net = tf.reshape(inputs,
+                         shape=(-1, self.args.img_size, self.args.img_size,
+                                self.args.img_depth), name='reshape')
 
       # Convolutional layers.
       with tf.name_scope('feature_extraction'):
@@ -91,15 +89,8 @@ class Model(tf.keras.Model):
 
     return net
 
-  def add_variable(self,
-                   name,
-                   shape,
-                   dtype=None,
-                   initializer=None,
-                   regularizer=None,
-                   trainable=True,
-                   constraint=None,
-                   **kwargs):
+  def add_variable(self, name, shape, dtype=None, initializer=None,
+                   regularizer=None, trainable=True, constraint=None, **kwargs):
     pass
 
   def save(self, filepath, overwrite=True, include_optimizer=True):
@@ -112,32 +103,36 @@ class Model(tf.keras.Model):
     pass
 
 
-def loss_fn(predictions, labels):
-  with tf.name_scope('loss'):
-    # loss = tf.keras.losses.categorical_crossentropy(y_true=labels, y_pred=predictions)
-    # loss = tf.reduce_mean(loss)
-    loss = tf.losses.mean_squared_error(
-      labels=labels,
-      predictions=predictions,
-      reduction=tf.losses.Reduction.MEAN)
-  return loss
+def loss_fn(predictions: tf.Tensor, labels: tf.Tensor):
+  """Loss function (Mean Squared Error).
+
+  Args:
+    predictions (tf.Tensor): Predicted values.
+    labels (tf.Tensor): Original target values.
+
+  Returns:
+    (tf.Tensor) - Loss scalar.
+  """
+  return tf.losses.mean_squared_error(labels=labels, predictions=predictions,
+                                      reduction=tf.losses.Reduction.MEAN)
 
 
 def train(args):
+  # Placeholder scope.
   with tf.name_scope('placeholders'):
     img_plhd = tf.placeholder(tf.string, shape=(None,), name="image")
 
-    default_label = tf.zeros_like(
-      img_plhd, dtype=tf.float32, name="default_labels")
+    default_label = tf.zeros_like(img_plhd, dtype=tf.float32,
+                                  name="default_labels")
 
     # For predictions: when no labels, create arbitrary label.
-    label_plhd = tf.placeholder_with_default(
-      input=default_label, shape=(None,), name="labels")
+    label_plhd = tf.placeholder_with_default(input=default_label,
+                                             shape=(None,), name="labels")
 
+  # Data & iterator scope.
   with tf.name_scope('data'):
     with tf.name_scope('dataset'):
       train_data = data.make_dataset(img_plhd, label_plhd)
-      # pred_data = data.make_dataset(img_plhd, label_plhd, batch_size=1)
 
     with tf.name_scope('iterator'):
       iterator = tf.data.Iterator.from_structure(
@@ -147,36 +142,37 @@ def train(args):
 
     with tf.name_scope('initializer'):
       train_data_init = iterator.make_initializer(train_data, name="train_data")
-      # pred_data_init = iterator.make_initializer(pred_data,
-      #                                            name="pred_data")
-  model = Model(args)
 
+  # Model & prediction
+  model = Model(args)
   predictions = model(dataset[Keys.IMAGES])
 
+  # Loss function & loss summary.
   loss = loss_fn(predictions, dataset[Keys.LABELS])
-
   tf.summary.scalar('loss', loss)
 
-  # Minimize loss (train the model).
-  optimizer = tf.train.RMSPropOptimizer(learning_rate=args.learning_rate)
-  global_step = tf.train.get_or_create_global_step()
-  train_op = optimizer.minimize(
-    loss=loss, global_step=global_step, name='train_op')
+  # Optimizer (training) scope.
+  with tf.name_scope('optimizer'):
+    optimizer = tf.train.RMSPropOptimizer(learning_rate=args.learning_rate)
+    global_step = tf.train.get_or_create_global_step()
+    train_op = optimizer.minimize(loss=loss, global_step=global_step,
+                                  name='train_op')
 
-  # Tensorboard summary.
+  # Merge all Tensorboard summaries.
   merged = tf.summary.merge_all()
 
+  # Running Computational Graph.
   with tf.Session() as sess:
     # Initialize global variables.
     init = tf.global_variables_initializer()
 
     # DEBUGGING:
-    sess.run(init)
-    filenames, targets = data.load_data(data.CSV_FILENAME)
-    feed_dict = {img_plhd: filenames, label_plhd: targets}
-
-    train_init = iterator.make_initializer(train_data, name="train_data")
-    sess.run(train_init, feed_dict=feed_dict)
+    # sess.run(init)
+    # filenames, targets = data.load_data(data.CSV_FILENAME)
+    # feed_dict = {img_plhd: filenames, label_plhd: targets}
+    #
+    # train_init = iterator.make_initializer(train_data, name="train_data")
+    # sess.run(train_init, feed_dict=feed_dict)
 
     # _p = sess.run(predictions)
     # print('Predictions', _p)
@@ -185,10 +181,20 @@ def train(args):
     # print('Loss', _lo)
 
     # Saved model directory.
-    save_dir = os.path.dirname(args.save_path)
 
     saver = tf.train.Saver()
     writer = tf.summary.FileWriter(logdir=args.log_dir, graph=sess.graph)
+    save_dir = os.path.dirname(args.save_path)
+
+    # Protobuf file where graph info will be saved.
+    graph_path_txt = 'graph.pbtxt'  # somewhat readable file.
+    graph_path_bin = 'graph.pb'  # binary file format.
+
+    # Save the graph definition here...
+    tf.train.write_graph(sess.graph_def, logdir=save_dir,
+                         name=graph_path_txt, as_text=True)
+    tf.train.write_graph(sess.graph_def, logdir=save_dir,
+                         name=graph_path_bin, as_text=False)
 
     if tf.gfile.Exists(save_dir):
       try:
@@ -221,10 +227,8 @@ def train(args):
             # Run train operation.
             _, _step, _loss = sess.run([train_op, global_step, loss])
 
-            print(
-              '\rEpoch: {:,} Step: {:,} Loss: {:,.2f}'.format(
-                epoch, _step, _loss),
-              end='')
+            print('\rEpoch: {:,} Step: {:,} Loss: {:,.2f}'
+                  .format(epoch, _step, _loss), end='')
 
             if _step % args.log_every == 0:
               summary = sess.run(merged)
@@ -232,8 +236,8 @@ def train(args):
 
             if _step % args.save_every == 0:
               print('\n{0}\nSaving model...'.format('-' * 55))
-              saver.save(
-                sess=sess, save_path=args.save_path, global_step=global_step)
+              saver.save(sess=sess, save_path=args.save_path,
+                         global_step=global_step)
               print('{0}\n'.format('-' * 55))
 
           except tf.errors.OutOfRangeError:

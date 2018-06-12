@@ -15,11 +15,11 @@
      Copyright (c) 2018. Victor I. Afolabi. All rights reserved.
 """
 import argparse
-import os.path
+import os
 
 import tensorflow as tf
 from tensorflow.python.framework.graph_util import convert_variables_to_constants
-from tensorflow.python.tools import optimize_for_inference_lib
+from tensorflow.python.tools import optimize_for_inference_lib, freeze_graph
 
 
 def freeze_v2(ckpt_dir: str, output_nodes: list, **kwargs):
@@ -109,6 +109,24 @@ def freeze(ckpt_dir: str, output_nodes: list, **kwargs):
   # Get the latest checkpoint.
   ckpt_path = os.path.abspath(tf.train.latest_checkpoint(ckpt_dir))
 
+  model_name = os.path.basename(frozen_file)
+  model_name = model_name.split('.')[0]
+
+  input_graph_path = '{}.pbtxt'.format(model_name)
+  input_saver_def_path = ""
+  input_binary = False
+  output_node_names = "O"
+  restore_op_name = "save/restore_all"
+  filename_tensor_name = "save/Const:0"
+  output_frozen_graph_name = '{}.pb'.format(model_name)
+  output_optimized_graph_name = 'optimized_{}.pb'.format(model_name)
+  clear_devices = True
+
+  freeze_graph.freeze_graph(input_graph_path, input_saver_def_path,
+                            input_binary, ckpt_path, output_node_names,
+                            restore_op_name, filename_tensor_name,
+                            output_frozen_graph_name, clear_devices, "")
+
   # File holding graph metadata.
   meta_file = '{}.meta'.format(ckpt_path)
 
@@ -134,11 +152,11 @@ def freeze(ckpt_dir: str, output_nodes: list, **kwargs):
         output_node_names=['model/layers/output/BiasAdd'],
         placeholder_type_enum=tf.float32.as_datatype_enum
       )
-      print(output_graph_def)
       # Dave optimized graph.
       tf.train.write_graph(output_graph_def, logdir=os.path.dirname(frozen_file),
                            name=os.path.basename(frozen_file), as_text=False)
-      # # Write serialized string into frozen protobuf file.
+
+      # Write serialized string into frozen protobuf file.
       # with tf.gfile.GFile(frozen_file, mode='wb') as f:
       #   f.write(output_graph_def.SerializeToString())
       print('Frozen model saved to "{}".'.format(frozen_file))

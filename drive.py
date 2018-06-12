@@ -19,11 +19,12 @@ import argparse
 import tensorflow as tf
 
 import socketio
-import eventlet.wsgi
-from flask import Flask
+
+# import eventlet.wsgi
+# from flask import Flask
 
 # Helper file to load frozen model.
-from frozen_model import load
+# from frozen_model import load
 
 # Global objects.
 sio, driver = socketio.Server(), None
@@ -36,8 +37,8 @@ class Drive:
     self._min_speed = kwargs.get('min_speed') or 10
     self._speed_limit = self._max_speed
 
-    self.graph = load(frozen_file=frozen_file)
-    self.sess = tf.Session(graph=self.graph)
+    # self.graph = load(frozen_file=frozen_file)
+    # self.sess = tf.Session(graph=self.graph)
 
     if not tf.gfile.Exists(frozen_file):
       raise FileNotFoundError('{} was not found.'.format(frozen_file))
@@ -51,9 +52,11 @@ class Drive:
       self.graph_def.ParseFromString(f.read())
 
     # Load graph_def into default graph
-    with tf.Graph().as_default() as graph:
+    with tf.Graph().as_default():
       # Import graph def to default graph.
-      tf.import_graph_def(graph_def=self.graph_def, name=prefix, **kwargs)
+      self.graph = tf.import_graph_def(graph_def=self.graph_def,
+                                       name=prefix, **kwargs)
+      self.sess = tf.Session(graph=self.graph)
 
   def connect(self, sid, env):
     # Connection info.
@@ -64,21 +67,20 @@ class Drive:
     self.drive(0, self._speed_limit)
 
   def drive(self, steering_angle, throttle):
-    self._speed_limit = (self._min_speed
-                         if throttle > self._speed_limit else self._max_speed)
+    self._speed_limit = (self._min_speed if throttle > self._speed_limit
+                         else self._max_speed)
     # (1 - A^2) - (s/L)^2
     throttle = 1.0 - steering_angle ** 2 - \
                (throttle / self._speed_limit) ** 2
 
-    sio.emit(
-      event="steer",
-      data={
-        "steering_angle": str(steering_angle),
-        "throttle": str(throttle)
-      },
-      skip_sid=True)
+    sio.emit(event="steer",
+             data={
+               "steering_angle": str(steering_angle),
+               "throttle": str(throttle)
+             }, skip_sid=True)
 
   def telemetry(self, sid, data):
+    print('Socket ID:', sid)
     # Collect data.
     steering_angle = float(data['steering_angle'])
     throttle = float(data['throttle'])
@@ -86,14 +88,9 @@ class Drive:
     # Drive the car with these parameters.
     self.drive(steering_angle, throttle)
 
-  def predict(self, image):
+  def predict(self):
     # out_tensor_name = "nvidia/model/layers/output/BiasAdd:0"
     # prediction = self.graph.get_tensor_by_name(out_tensor_name)
-    # feed_dict = {}
-    # self.sess.run(prediction, feed_dict=feed_dict)
-    # print(prediction)
-    # dataset = create_tiny_dataset((image,))
-    # print(dataset)
 
     # iter_op = self.graph.get_operation_by_name('nvidia/Iterator')
     # print(self.sess.run(iter_op.values()))
@@ -126,16 +123,13 @@ if __name__ == '__main__':
   # Command line arguments.
   parser = argparse.ArgumentParser(
     description='Remote Driving for Simulator in "Autonomous Mode".',
-    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter
+  )
 
-  parser.add_argument(
-    '-m',
-    '--model',
-    dest='frozen_file',
-    type=str,
-    default='saved/frozen/nvidia.pb',
-    help='Frozen model to be used. Must have a `.pb` extension. '
-         '(default: saved/frozen/nvidia.pb)')
+  parser.add_argument('-m', '--model', dest='frozen_file', type=str,
+                      default='saved/frozen/nvidia.pb',
+                      help='Frozen model to be used. Must have a `.pb` extension. '
+                           '(default: saved/frozen/nvidia.pb)')
 
   # Parse known arguments.
   args = parser.parse_args()
@@ -147,8 +141,8 @@ if __name__ == '__main__':
   print('{}\n'.format('-' * 55))
 
   # Driver object.
-  driver = Drive(model_path=args.model_path)
-  driver.predict('')
+  driver = Drive(frozen_file=args.frozen_file)
+  driver.predict()
 
   # # Flask app.
   # app = Flask(__name__)
