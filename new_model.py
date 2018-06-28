@@ -82,3 +82,7 @@ class Model(object):
     @property
     def data(self):
         return self._data
+
+
+if __name__ == '__main__':
+    pass

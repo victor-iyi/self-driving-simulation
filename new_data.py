@@ -52,6 +52,7 @@ class Dataset(Data):
         # Extract keyword arguments.
         feature_col = kwargs.get('feature_col') or self.COL_NAMES[0]
         label_col = kwargs.get('label_col') or self.COL_NAMES[-1]
+        self._img_size = kwargs.get('img_size') or (200, 200)
 
         if not os.path.isfile(filename):
             raise FileNotFoundError('{} was not found!'.format(filename))
@@ -63,7 +64,10 @@ class Dataset(Data):
         img_paths = self._df[feature_col].astype(str).values
         label_paths = self._df[label_col].astype(np.float32).values
 
-        data = self._create_data(img_paths, label_paths)
+        self._create_data(img_paths, label_paths)
+
+    def load_data(self, train=True, size=0.2, **kwargs):
+        normalize = kwargs.get('normalize', False)
 
     def __repr__(self):
         return "Dataset"
@@ -72,16 +76,24 @@ class Dataset(Data):
     def fromArray(cls, arr):
         pass
 
-    def _create_data(self, img_paths, label_paths):
+    def _create_data(self, img_paths, labels):
+        assert len(img_paths) == len(labels), 'Lengths don\'t match!'
 
-        yield img_paths, label_paths
+        images = np.empty(shape=(len(img_paths), *self._size))
 
-    def _process_img(self, img_path: str, size: tuple=(200, 200)):
+        for path, label in zip(img_paths, labels):
+            image = self._process_img(path)
+            print(image.shape)
+            break
+
+            # yield img_paths, label_paths
+
+    def _process_img(self, img_path: str):
         # Load image from path.
         image = cv2.imread(img_path)
 
         # Resize image.
-        image = cv2.resize(image, size)
+        image = cv2.resize(image, self._img_size)
 
         # Convert to RGB colors.
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
