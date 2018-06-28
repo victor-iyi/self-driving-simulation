@@ -64,13 +64,18 @@ class Dataset(Data):
         img_paths = self._df[feature_col].astype(str).values
         label_paths = self._df[label_col].astype(np.float32).values
 
-        self._create_data(img_paths, label_paths)
+        self._images, self._labels = self._create_data(img_paths, label_paths)
+
+        print(self._images.shape, self._labels.shape)
 
     def load_data(self, train=True, size=0.2, **kwargs):
         normalize = kwargs.get('normalize', False)
 
     def __repr__(self):
-        return "Dataset"
+        return '<Dataset {} - {}>'.format(self._images.shape, self._labels.shape)
+
+    def __len__(self):
+        return len(self._df)
 
     @classmethod
     def fromArray(cls, arr):
@@ -79,14 +84,14 @@ class Dataset(Data):
     def _create_data(self, img_paths, labels):
         assert len(img_paths) == len(labels), 'Lengths don\'t match!'
 
-        images = np.empty(shape=(len(img_paths), *self._size))
+        # Process images.
+        images = [self._process_img(path) for path in imag_paths]
+        images = np.asarray(images, dtype=np.float32)
 
-        for path, label in zip(img_paths, labels):
-            image = self._process_img(path)
-            print(image.shape)
-            break
+        # Process labels.
+        labels = np.asarray(labels, dtype=np.float32)
 
-            # yield img_paths, label_paths
+        return images, labels
 
     def _process_img(self, img_path: str):
         # Load image from path.
@@ -103,6 +108,14 @@ class Dataset(Data):
     @property
     def df(self):
         return self._df
+
+    @property
+    def images(self):
+        return self._images
+
+    @property
+    def labels(self):
+        return self._labels
 
 
 if __name__ == '__main__':
