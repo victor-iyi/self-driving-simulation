@@ -14,15 +14,11 @@
      MIT License
      Copyright (c) 2018. Victor I. Afolabi. All rights reserved.
 """
+import os.path
 
 import tensorflow as tf
+
 from new_data import Dataset
-
-
-class Mode(object):
-    train = 'TRAIN'
-    predict = 'PREDICT'
-    evaluate = 'EVALUATE'
 
 
 class Model(object):
@@ -32,6 +28,7 @@ class Model(object):
         self._dropout = kwargs.get('dropout', 0.5)
         self._save_dir = kwargs.get('save_dir', 'saved/')
         self._img_dim = kwargs.get('img_dim', (200, 200, 3))
+        self._ckpt_name = kwargs.get('chkpt_name', 'model.ckpt')
 
         # Session & data.
         self._sess, self._data = sess, data
@@ -42,14 +39,14 @@ class Model(object):
         self.y_plhd = tf.placeholder(dtype=tf.float32, shape=(None,))
 
         # Model Hyperparameters.
-        self._mode = Mode.predict
         self._num_classes = 1
+        self._mode = self.ModeKeys.TRAIN
         self._global_step = tf.train.get_or_create_global_step()
 
         self.build_graph()
         # self.build_eval_graph()
 
-        # self._saver = tf.train.Saver()
+        self._saver = tf.train.Saver()
         self.restore()
 
     def __call__(self, X, **kwargs):
@@ -90,7 +87,7 @@ class Model(object):
                 # Flatten & Dropout.
                 net = tf.layers.flatten(net)
                 net = tf.layers.dropout(net, rate=self._dropout,
-                                        training=self._mode == Mode.train)
+                                        training=self._mode == self.ModeKeys.TRAIN)
                 # Fully connected layers.
                 net = tf.layers.dense(net, units=1024, activation='relu',
                                       name='dense1')
@@ -103,6 +100,21 @@ class Model(object):
 
     def build_eval_graph(self):
         pass
+
+    def freeze(self):
+        pass
+
+    def load(self):
+        pass
+
+    def save(self, save_dir: str, graph: bool=False):
+        if not tf.gfile.IsDirectory(save_dir):
+            tf.gfile.MakeDirs(save_dir)
+
+        save_path = os.path.join(save_dir, self._ckpt_name)
+
+        self._saver.save(self._sess, save_path=save_path,
+                         global_step=self._global_step)
 
     def restore(self):
         # Restore checkpoint properly.
@@ -131,6 +143,10 @@ class Model(object):
     @property
     def data(self):
         return self._data
+
+    @property
+    def ModeKeys(self):
+        return tf.estimator.ModeKeys
 
 
 if __name__ == '__main__':
