@@ -66,20 +66,35 @@ class Dataset(Data):
 
         self._images, self._labels = self._create_data(img_paths, label_paths)
 
-        print(self._images.shape, self._labels.shape)
+    def load_data(self, train: bool=True, size: float=0.3, valid_portion: float=None):
 
-    def load_data(self, train=True, size=0.2, **kwargs):
-        normalize = kwargs.get('normalize', False)
+        if 0 >= size < 1:
+            raise ValueError('Size must be between 0 & 1.')
+
+        test_size = int(len(self._images) * size)
+        train = self._images[:-test_size], self._labels[:-test_size]
+        test = self._images[-test_size:], self._labels[-test_size:]
+
+        if valid_portion is not None:
+            if 0 >= valid_portion < 1:
+                raise ValueError('`valid_portion` must be between 0 & 1.')
+
+            # Calculate the validation size.
+            valid_size = int(len(train[0]) * valid_portion)
+
+            # Split validation from training set.
+            train = train[0][:-valid_size], train[1][:-valid_size]
+            valid = test[0][-valid_size:], test[1][-valid_size:]
+
+            return train, test, valid
+
+        return train, test
 
     def __repr__(self):
         return '<Dataset {} - {}>'.format(self._images.shape, self._labels.shape)
 
     def __len__(self):
         return len(self._df)
-
-    @classmethod
-    def fromArray(cls, arr):
-        pass
 
     def _create_data(self, img_paths, labels):
         assert len(img_paths) == len(labels), 'Lengths don\'t match!'
@@ -120,3 +135,7 @@ class Dataset(Data):
 
 if __name__ == '__main__':
     data = Dataset('simulations/driving_log.csv')
+
+    train, test = data.load_data()
+    X_train, y_train = train
+    X_test, y_test = test
