@@ -85,7 +85,7 @@ class Dataset(Data):
         assert len(img_paths) == len(labels), 'Lengths don\'t match!'
 
         # Process images.
-        images = [self._process_img(path) for path in imag_paths]
+        images = [self._process_img(path) for path in img_paths]
         images = np.asarray(images, dtype=np.float32)
 
         # Process labels.

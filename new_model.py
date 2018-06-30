@@ -22,6 +22,7 @@ from new_data import Dataset
 
 
 class Model(object):
+
     def __init__(self, sess: tf.Session, data: Dataset, **kwargs):
         # Extract keyword arguments.
         self._verbose = kwargs.get('verbose', 1)
@@ -58,8 +59,12 @@ class Model(object):
     def train(self):
         pass
 
-    def predict(self):
-        pass
+    def predict(self, X, **kwargs):
+
+        feed_dict = {X_plhd: X}
+        y_pred = self._sess.run(self.y_pred, feed_dict=feed_dict)
+
+        return y_pred
 
     def evaluate(self):
         pass
@@ -100,6 +105,13 @@ class Model(object):
 
     def build_eval_graph(self):
         pass
+
+    def loss(self, predictions):
+        with tf.name_scope('loss'):
+            loss = tf.losses.mean_squared_error(labels=self.y_plhd,
+                                                predictions=predictions,
+                                                reduction=tf.losses.Reduction.MEAN)
+        return loss
 
     def freeze(self):
         pass
