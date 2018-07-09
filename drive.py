@@ -62,7 +62,7 @@ class Drive:
                              else self._max_speed)
         # (1 - A^2) - (s/L)^2
         throttle = 1.0 - steering_angle ** 2 - \
-                   (throttle / self._speed_limit) ** 2
+            (throttle / self._speed_limit) ** 2
 
         sio.emit(event="steer",
                  data={
@@ -92,7 +92,8 @@ class Drive:
         image = image[60:-25, :, :]
 
         # Resize the image to the input shape used by the network model.
-        image = cv2.resize(image, (self.img_size, self.img_size), cv2.INTER_AREA)
+        image = cv2.resize(
+            image, (self.img_size, self.img_size), cv2.INTER_AREA)
 
         # Convert the image from RGB to YUV (This is what the NVIDIA model does)
         image = cv2.cvtColor(image, cv2.COLOR_RGB2YUV)
@@ -108,8 +109,10 @@ class Drive:
 
         # # Get image placeholder & prediction tensor.
         img_plhd = self.graph.get_tensor_by_name('nvidia/placeholders/image:0')
-        output = self.graph.get_tensor_by_name('nvidia/model/layers/output/BiasAdd:0')
-        init = self.graph.get_operation_by_name('nvidia/data/initializer/train_data')
+        output = self.graph.get_tensor_by_name(
+            'nvidia/model/layers/output/BiasAdd:0')
+        init = self.graph.get_operation_by_name(
+            'nvidia/data/initializer/train_data')
         # label_plhd = self.graph.get_tensor_by_name('nvidia/placeholders/labels:0')
 
         # print(img_plhd.shape, label_plhd.shape)
