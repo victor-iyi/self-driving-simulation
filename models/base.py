@@ -15,22 +15,27 @@
      Copyright (c) 2018. Victor I. Afolabi. All rights reserved.
 """
 
+from tensorflow import keras
 
-class ModelBase(object):
+
+class ModelBase(keras.Model):
+
     def __init__(self, **kwargs):
-        pass
+        super(ModelBase, self).__init__(name='Model')
+
+        # Extract keyword arguments.
+        self._verbose = kwargs.get('verbose', 1)
 
     def __repr__(self):
-        return NotImplemented
+        return f'ModelBase(verbose={self._verbose})'
 
     def __str__(self):
         return self.__repr__()
 
-    def __call__(self, inputs, **kwargs):
-        return self.predict(inputs, **kwargs)
+    def call(self, inputs, **kwargs):
+        return NotImplemented
 
-    def predict(self, inputs, **kwargs):
-        pass
-
-    def train(self, X, y, **kwargs):
-        pass
+    def compute_output_shape(self, input_shape):
+        shape = tf.TensorShape(input_shape).as_list()
+        shape[-1] = self.num_classes
+        return tf.TensorShape(shape)
