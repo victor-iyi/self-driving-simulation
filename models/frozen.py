@@ -14,18 +14,15 @@
      MIT License
      Copyright (c) 2018. Victor I. Afolabi. All rights reserved.
 """
-from models.base import BaseModel
+from models.base import Base
 
 
-class Frozen(BaseModel):
+class Frozen(Base):
     def __init__(self, **kwargs):
-        pass
+        super(Frozen, self).__init__(name='Frozen')
 
     def __repr__(self):
         return 'models.Frozen()'
 
-    def predict(self, inputs, **kwargs):
-        pass
-
-    def load(self):
+    def call(self, inputs, **kwargs):
         pass
